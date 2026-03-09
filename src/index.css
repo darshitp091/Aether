@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Anton&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Anton", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-accent: #00FF66; /* Neon Green */
+  --color-ink: #000000;
+  --color-paper: #FFFFFF;
+  --color-muted: #F5F5F5;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white font-sans selection:bg-accent selection:text-black overflow-x-hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display uppercase tracking-tighter;
+  }
+}
+
+@layer components {
+  .brutal-border {
+    @apply border-4 border-white shadow-[8px_8px_0px_0px_rgba(255,255,255,1)];
+  }
+  
+  .brutal-btn {
+    @apply px-10 py-5 bg-white text-black font-display text-2xl uppercase tracking-tighter hover:bg-accent hover:shadow-[12px_12px_0px_0px_rgba(0,255,102,1)] active:translate-x-2 active:translate-y-2 active:shadow-none transition-all border-4 border-black;
+  }
+
+  .outline-text {
+    -webkit-text-stroke: 2px #00FF66;
+    color: transparent;
+  }
+
+  .outline-text-white {
+    -webkit-text-stroke: 2px white;
+    color: transparent;
+  }
+
+  .outline-text-black {
+    -webkit-text-stroke: 2px black;
+    color: transparent;
+  }
+
+  .marquee-container {
+    @apply overflow-hidden whitespace-nowrap py-6 border-y-4 border-white bg-white text-black font-display text-6xl uppercase tracking-tighter;
+  }
+
+  .marquee-content {
+    display: inline-block;
+    animation: marquee 20s linear infinite;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.brutal-card {
+  @apply bg-[#111] border-2 border-white p-6 hover:bg-accent hover:text-black transition-all duration-300;
+}
+
+.brutal-card h3 {
+  @apply text-2xl mb-2;
+}
+
+.brutal-card p {
+  @apply text-sm font-mono opacity-70;
+}
