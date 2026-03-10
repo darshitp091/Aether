@@ -462,6 +462,50 @@ app.post("/api/webhooks/printify", async (req, res) => {
   }
 });
 
+// Debug: Test color extraction for a product (GET to make it easy to test)
+app.get("/api/debug/colors/:shopId", async (req, res) => {
+  try {
+    const productList = await printifyFetch(`/shops/${req.params.shopId}/products.json`);
+    const products = productList.data || productList;
+    const p = Array.isArray(products) ? products[0] : products;
+
+    // Fetch full product detail
+    const fullProduct = await printifyFetch(`/shops/${req.params.shopId}/products/${p.id}.json`);
+
+    const colorOption = fullProduct.options?.find((opt: any) => opt.type === 'color');
+    const nativeMap: Record<string, string> = {};
+    if (colorOption?.values) {
+      colorOption.values.forEach((v: any) => {
+        if (v.colors?.[0] && v.title) {
+          nativeMap[v.title.trim()] = v.colors[0];
+        }
+      });
+    }
+
+    const results = fullProduct.variants.slice(0, 20).map((v: any) => {
+      const colorName = v.title.split(" / ")[0] || "Default";
+      const nativeHex = nativeMap[colorName];
+      const fallbackHex = getHexForColor(colorName);
+      return {
+        color: colorName,
+        nativeHex: nativeHex || "NONE",
+        fallbackHex,
+        finalHex: nativeHex || fallbackHex
+      };
+    });
+
+    res.json({
+      product: fullProduct.title,
+      optionsCount: fullProduct.options?.length || 0,
+      nativeColorsFound: Object.keys(nativeMap).length,
+      sampleNativeMap: Object.entries(nativeMap).slice(0, 5).map(([k, v]) => `${k}=${v}`),
+      variantColors: results
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 app.post("/api/printify/sync/:shopId", async (req, res) => {
   try {
     await ensureCategories();
