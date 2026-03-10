@@ -23,11 +23,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-accent selection:text-black">
       <GlobalBackground3D />
-      
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12 bg-black border-b-4 border-white">
         <div className="flex items-center gap-6 md:gap-12">
-          <button 
+          <button
             onClick={() => setIsMenuOpen(true)}
             className="p-3 bg-white text-black hover:bg-accent transition-all border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,255,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
           >
@@ -39,10 +39,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="hidden lg:flex items-center gap-10 font-display text-xl uppercase tracking-tighter">
-          {['Men', 'Women', 'Kids', 'Drops', 'Admin'].map((item) => (
-            <Link 
+          {['Men', 'Women', 'Kids', 'Drops'].map((item) => (
+            <Link
               key={item}
-              to={item === 'Drops' ? '/collections' : item === 'Admin' ? '/admin' : `/category/${item.toLowerCase()}`} 
+              to={item === 'Drops' ? '/collections' : `/category/${item.toLowerCase()}`}
               className="hover:text-accent transition-colors relative group"
             >
               {item}
@@ -52,8 +52,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <button 
-            onClick={() => setIsSearchOpen(true)} 
+          <button
+            onClick={() => setIsSearchOpen(true)}
             className="p-3 hover:bg-accent hover:text-black transition-all border-2 border-transparent hover:border-black rounded-none"
           >
             <Search size={24} />
@@ -100,7 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <div className="flex justify-between items-center mb-20">
                 <span className="font-mono text-sm tracking-[0.5em] uppercase font-bold">[ AETHER_NAVIGATION_V2.5 ]</span>
-                <button 
+                <button
                   onClick={() => setIsMenuOpen(false)}
                   className="p-5 bg-black text-white hover:bg-accent hover:text-black transition-all border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,255,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
                 >
@@ -109,10 +109,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="flex flex-col gap-4">
-                {['Men', 'Women', 'Kids', 'Drops', 'Manifesto', 'Admin'].map((item, i) => (
+                {['Men', 'Women', 'Kids', 'Drops', 'Manifesto'].map((item, i) => (
                   <Link
                     key={item}
-                    to={item === 'Drops' ? '/collections' : item === 'Admin' ? '/admin' : item === 'Manifesto' ? '/about' : `/category/${item.toLowerCase()}`}
+                    to={item === 'Drops' ? '/collections' : item === 'Manifesto' ? '/about' : `/category/${item.toLowerCase()}`}
                     className="text-7xl md:text-[10vw] font-display leading-[0.8] hover:text-accent hover:translate-x-8 transition-all flex items-center gap-8 group uppercase tracking-tighter"
                   >
                     <span className="text-2xl font-mono text-black/10 group-hover:text-accent transition-colors">0{i + 1}</span>
@@ -146,7 +146,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, y: -100 }}
             className="fixed inset-0 bg-accent text-black z-[100] p-8 md:p-32 flex flex-col items-center justify-center"
           >
-            <button 
+            <button
               onClick={() => setIsSearchOpen(false)}
               className="absolute top-12 right-12 p-6 bg-black text-white hover:bg-white hover:text-black transition-all border-4 border-black shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]"
             >
@@ -207,12 +207,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <li><Link to="/shipping" className="hover:text-accent transition-all hover:translate-x-4 inline-block">SHIPPING</Link></li>
                   <li><Link to="/size-guide" className="hover:text-accent transition-all hover:translate-x-4 inline-block">SIZING</Link></li>
                   <li><Link to="/contact" className="hover:text-accent transition-all hover:translate-x-4 inline-block">CONTACT</Link></li>
-                  <li><Link to="/admin" className="hover:text-accent transition-all hover:translate-x-4 inline-block">ADMIN</Link></li>
                 </ul>
               </div>
             </div>
           </div>
-          
+
           <div className="pt-20 border-t-8 border-black flex flex-col lg:flex-row justify-between items-center gap-16">
             <div className="font-mono text-sm uppercase tracking-[0.5em] font-bold text-center lg:text-left">
               © 2026 AETHER WORLDWIDE // ALL RIGHTS RESERVED <br />

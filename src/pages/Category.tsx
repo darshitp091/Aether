@@ -12,7 +12,7 @@ export default function Category() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
+
   const type = searchParams.get('type');
   const color = searchParams.get('color');
   const size = searchParams.get('size');
@@ -21,13 +21,13 @@ export default function Category() {
     setLoading(true);
     let url = `/api/products?gender=${gender}`;
     if (type) url += `&type=${type}`;
-    
+
     fetch(url)
       .then(res => res.json())
       .then(data => {
         let filtered = data;
-        if (color) filtered = filtered.filter((p: Product) => p.colors.includes(color));
-        if (size) filtered = filtered.filter((p: Product) => p.sizes.includes(size));
+        if (color) filtered = filtered.filter((p: Product) => p.product_variants?.some(v => v.hex_code === color || v.color === color));
+        if (size) filtered = filtered.filter((p: Product) => p.product_variants?.some(v => v.size === size));
         setProducts(filtered);
         setLoading(false);
       });
@@ -55,18 +55,17 @@ export default function Category() {
             </span>
           ))}
         </h1>
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-12 pt-16 border-t-[8px] border-white">
           <div className="flex flex-wrap gap-10">
             {['All', 'T-Shirt', 'Hoodie', 'Sweatshirt'].map(t => (
               <button
                 key={t}
                 onClick={() => updateFilter('type', t === 'All' ? null : t.toLowerCase().replace('-', ''))}
-                className={`font-display text-3xl uppercase tracking-tighter transition-all relative group ${
-                  (t === 'All' && !type) || (type === t.toLowerCase().replace('-', ''))
-                    ? 'text-accent'
-                    : 'text-white/40 hover:text-white'
-                }`}
+                className={`font-display text-3xl uppercase tracking-tighter transition-all relative group ${(t === 'All' && !type) || (type === t.toLowerCase().replace('-', ''))
+                  ? 'text-accent'
+                  : 'text-white/40 hover:text-white'
+                  }`}
               >
                 {t}
                 {((t === 'All' && !type) || (type === t.toLowerCase().replace('-', ''))) && (
@@ -76,7 +75,7 @@ export default function Category() {
             ))}
           </div>
           <div className="flex items-center gap-8">
-            <button 
+            <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={cn(
                 "flex items-center gap-6 font-display text-2xl uppercase tracking-widest transition-all px-8 py-4 border-4 shadow-[6px_6px_0px_0px_rgba(255,255,255,1)]",
@@ -134,7 +133,7 @@ export default function Category() {
                   </div>
                 </div>
                 <div className="flex items-end">
-                  <button 
+                  <button
                     onClick={() => {
                       setSearchParams(new URLSearchParams());
                       setIsFilterOpen(false);
@@ -156,37 +155,48 @@ export default function Category() {
           {[...Array(6)].map((_, i) => <ProductSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {products.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05 }}
-              className="group"
-            >
-              <Link to={`/product/${product.slug}`}>
-                <div className="aspect-[3/4] overflow-hidden bg-zinc-900 mb-8 relative border-2 border-white group-hover:border-accent transition-all duration-300">
-                  <img 
-                    src={product.image_url} 
-                    alt={product.name}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-4 right-4 bg-white text-black px-3 py-1 text-[10px] font-bold uppercase tracking-widest z-10">
-                    {product.type}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
+          {products.map((product, index) => {
+            const displayImage = product.product_variants?.[0]?.image_url || product.image_url || (product as any).metadata?.all_images?.[0];
+            return (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="group"
+              >
+                <Link to={`/product/${product.slug}`}>
+                  <div className="aspect-[3/4] overflow-hidden bg-zinc-900 mb-8 relative border-2 border-white/10 group-hover:border-accent transition-all duration-500 shadow-2xl">
+                    <img
+                      src={displayImage}
+                      alt={product.name}
+                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute top-4 right-4 bg-white text-black px-3 py-1 text-[10px] font-black uppercase tracking-widest z-10">
+                      {product.type}
+                    </div>
+                    {product.gender === 'unisex' && (
+                      <div className="absolute top-4 left-4 bg-accent text-black px-3 py-1 text-[10px] font-black uppercase tracking-widest z-10">
+                        UNISEX
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="flex justify-between items-start px-2">
-                  <div>
-                    <h3 className="text-3xl mb-1 group-hover:text-accent transition-colors uppercase">{product.name}</h3>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-white/40">{product.type}</p>
+                  <div className="flex justify-between items-start px-2">
+                    <div className="flex-1">
+                      <h3 className="text-3xl font-display mb-2 group-hover:text-accent transition-colors uppercase leading-none tracking-tight">{product.name}</h3>
+                      <div className="flex items-center gap-4">
+                        <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-white/40">{product.type}</p>
+                        <div className="h-[1px] flex-1 bg-white/10 group-hover:bg-accent/40 transition-all"></div>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-display text-accent ml-6">{formatPrice(product.markup_price)}</span>
                   </div>
-                  <span className="text-2xl font-display text-accent">{formatPrice(product.price)}</span>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 

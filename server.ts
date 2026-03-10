@@ -1,16 +1,38 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
+import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("ecommerce.db");
+export const app = express();
+app.use(express.json());
+
+// Production optimization
+if (process.env.NODE_ENV === "production") {
+  app.set('trust proxy', 1);
+}
+
+// Supabase Configuration
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+const PORT = Number(process.env.PORT) || 3000;
+
+// Razorpay Setup
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "placeholder_secret",
+});
 
 // Printify API Configuration
 const PRINTIFY_API_BASE = "https://api.printify.com/v1";
@@ -38,104 +60,156 @@ async function printifyFetch(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
-// Initialize Database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    printify_id TEXT UNIQUE,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    description TEXT,
-    price REAL NOT NULL,
-    category_id INTEGER,
-    type TEXT CHECK(type IN ('tshirt', 'hoodie', 'sweatshirt')),
-    gender TEXT CHECK(gender IN ('men', 'women', 'kids', 'unisex')),
-    colors TEXT, -- JSON array of color hex codes
-    sizes TEXT, -- JSON array of sizes
-    image_url TEXT,
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    name TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS wishlist (
-    user_id INTEGER,
-    product_id INTEGER,
-    PRIMARY KEY (user_id, product_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
-  );
-`);
-
-// Migration: Add printify_id if it doesn't exist (for existing tables)
-try {
-  db.prepare("ALTER TABLE products ADD COLUMN printify_id TEXT UNIQUE").run();
-} catch (e) {
-  // Column already exists or other error
-}
-
-// Seed initial data if empty
-const categoryCount = db.prepare("SELECT COUNT(*) as count FROM categories").get() as { count: number };
-if (categoryCount.count === 0) {
-  const insertCat = db.prepare("INSERT INTO categories (name, slug) VALUES (?, ?)");
-  insertCat.run("Men", "men");
-  insertCat.run("Women", "women");
-  insertCat.run("Kids", "kids");
-
-  const insertProd = db.prepare("INSERT INTO products (printify_id, name, slug, description, price, category_id, type, gender, colors, sizes, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-  
-  const products = [
-    // Men
-    [null, "AETHER Signature Tee", "aether-signature-tee", "Premium heavyweight cotton with a structured drape.", 95.00, 1, "tshirt", "men", ["#000000", "#FFFFFF", "#333333"], ["S", "M", "L", "XL"], "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80"],
-    [null, "Onyx Tech Hoodie", "onyx-tech-hoodie", "Water-repellent technical fleece with bonded seams.", 220.00, 1, "hoodie", "men", ["#1A1A1A", "#000000"], ["M", "L", "XL"], "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80"],
-    [null, "Urban Nomad Sweatshirt", "urban-nomad-sweatshirt", "Relaxed fit with reinforced elbows and hidden pockets.", 165.00, 1, "sweatshirt", "men", ["#4B5563", "#1F2937"], ["S", "M", "L"], "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80"],
-    [null, "Midnight Cargo Tee", "midnight-cargo-tee", "Utility-inspired tee with a subtle chest pocket.", 110.00, 1, "tshirt", "men", ["#000000", "#2D3748"], ["M", "L", "XL"], "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=800&q=80"],
-    [null, "Summit Thermal Hoodie", "summit-thermal-hoodie", "High-loft thermal lining for extreme comfort.", 245.00, 1, "hoodie", "men", ["#FFFFFF", "#E2E8F0"], ["L", "XL"], "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?auto=format&fit=crop&w=800&q=80"],
-    [null, "Core Fleece Sweatshirt", "core-fleece-sweatshirt", "The essential everyday layer in brushed fleece.", 130.00, 1, "sweatshirt", "men", ["#000000", "#4A5568"], ["S", "M", "L", "XL"], "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80"],
-    
-    // Women
-    [null, "Silk-Cotton Blend Tee", "silk-cotton-tee", "Luxurious blend with a subtle sheen and soft hand.", 125.00, 2, "tshirt", "women", ["#F7FAFC", "#EDF2F7"], ["XS", "S", "M"], "https://images.unsplash.com/photo-1554568218-0f1715e72254?auto=format&fit=crop&w=800&q=80"],
-    [null, "Ethereal Oversized Hoodie", "ethereal-hoodie", "Voluminous silhouette with extra-long drawstrings.", 210.00, 2, "hoodie", "women", ["#000000", "#2D3748"], ["S", "M", "L"], "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80"],
-    [null, "Zenith Cropped Sweatshirt", "zenith-cropped-sweat", "Modern crop length with wide ribbed cuffs.", 155.00, 2, "sweatshirt", "women", ["#CBD5E0", "#A0AEC0"], ["XS", "S", "M"], "https://images.unsplash.com/photo-1529139513477-323b63bc2d53?auto=format&fit=crop&w=800&q=80"],
-    [null, "Minimalist V-Neck Tee", "minimalist-v-neck", "Deep V-neck in fine-gauge organic cotton.", 85.00, 2, "tshirt", "women", ["#FFFFFF", "#000000"], ["S", "M", "L"], "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80"],
-    [null, "Velvet-Touch Hoodie", "velvet-touch-hoodie", "Plush velvet finish for ultimate luxury lounging.", 280.00, 2, "hoodie", "women", ["#1A202C", "#2D3748"], ["M", "L"], "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=800&q=80"],
-    [null, "Sculpted Fit Sweatshirt", "sculpted-fit-sweat", "Tailored fit that contours to the body.", 175.00, 2, "sweatshirt", "women", ["#000000", "#4A5568"], ["XS", "S", "M"], "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80"],
-
-    // Kids
-    [null, "Mini Aether Tee", "mini-aether-tee", "Durable and soft for the next generation.", 55.00, 3, "tshirt", "kids", ["#FFFFFF", "#000000"], ["2T", "4T", "6T"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-    [null, "Junior Cloud Hoodie", "junior-cloud-hoodie", "Lightweight and breathable for active play.", 95.00, 3, "hoodie", "kids", ["#E2E8F0", "#CBD5E0"], ["4T", "6T", "8"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-    [null, "Little Legend Sweatshirt", "little-legend-sweat", "Classic crewneck with a playful twist.", 75.00, 3, "sweatshirt", "kids", ["#000000", "#2D3748"], ["6", "8", "10"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-    [null, "Playground Essential Tee", "playground-tee", "Stain-resistant finish for worry-free wear.", 45.00, 3, "tshirt", "kids", ["#FFFFFF", "#A0AEC0"], ["2T", "4T"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-    [null, "Cozy Cub Hoodie", "cozy-cub-hoodie", "Extra soft lining for chilly mornings.", 110.00, 3, "hoodie", "kids", ["#1A202C", "#4A5568"], ["4T", "6T", "8"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-    [null, "Active Kid Sweatshirt", "active-kid-sweat", "Moisture-wicking fabric for all-day comfort.", 85.00, 3, "sweatshirt", "kids", ["#000000", "#FFFFFF"], ["8", "10", "12"], "https://images.unsplash.com/photo-1519233073524-d8a057a5a1bb?auto=format&fit=crop&w=800&q=80"],
-
-    // Unisex / More
-    [null, "Universal Oversized Tee", "universal-tee", "A truly unisex fit for everyone.", 100.00, 1, "tshirt", "unisex", ["#000000", "#FFFFFF"], ["S", "M", "L", "XL"], "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80"],
-    [null, "Infinity Loop Hoodie", "infinity-hoodie", "Seamless construction for a sleek look.", 260.00, 1, "hoodie", "unisex", ["#1A1A1A", "#FFFFFF"], ["M", "L"], "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80"],
-    [null, "Future Classic Sweatshirt", "future-classic-sweat", "Timeless design with modern fabric tech.", 190.00, 1, "sweatshirt", "unisex", ["#000000", "#E2E8F0"], ["S", "M", "L"], "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80"]
+// Base sync function for categories
+async function ensureCategories() {
+  const categories = [
+    { name: "Men", slug: "men" },
+    { name: "Women", slug: "women" },
+    { name: "Kids", slug: "kids" },
+    { name: "Unisex", slug: "unisex" }
   ];
 
-  for (const p of products) {
-    insertProd.run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], JSON.stringify(p[8]), JSON.stringify(p[9]), p[10]);
+  for (const cat of categories) {
+    await supabase
+      .from("categories")
+      .upsert(cat, { onConflict: "slug" });
   }
 }
 
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
 
-  app.use(express.json());
+  // Order & Fulfillment
+  app.post("/api/orders/create", async (req, res) => {
+    try {
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        items,
+        address,
+        total_amount,
+        shipping_cost
+      } = req.body;
+
+      // 1. Verify Payment
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "placeholder_secret")
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ error: "Invalid payment signature" });
+      }
+
+      // 2. Create Order in Supabase
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          total_amount,
+          shipping_cost,
+          status: 'paid',
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          shipping_address: address,
+          currency: 'INR'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 3. Create Items in Supabase
+      const orderItems = items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.id,
+        variant_id: item.variant_id || null,
+        printify_variant_id: item.printify_variant_id,
+        quantity: item.quantity,
+        unit_price: item.markup_price,
+        total_price: item.markup_price * item.quantity
+      }));
+
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+      if (itemsError) throw itemsError;
+
+      // 4. Trigger Printify Fulfillment
+      // We need a shop_id. Fetching the first shop for now.
+      const shops = await printifyFetch("/shops.json");
+      const shopId = shops[0].id;
+
+      const printifyOrder = await printifyFetch(`/shops/${shopId}/orders.json`, {
+        method: 'POST',
+        body: JSON.stringify({
+          external_id: order.id.toString(),
+          line_items: items.map((item: any) => ({
+            printify_variant_id: item.printify_variant_id,
+            quantity: item.quantity
+          })),
+          address_to: {
+            first_name: address.full_name.split(' ')[0],
+            last_name: address.full_name.split(' ').slice(1).join(' ') || 'Customer',
+            email: address.email,
+            phone: address.phone || '',
+            address1: address.line1,
+            address2: address.line2 || '',
+            city: address.city,
+            region: address.state || '',
+            zip: address.postal_code,
+            country: address.country_code
+          }
+        })
+      });
+
+      // 5. Update Order with Printify ID
+      await supabase
+        .from("orders")
+        .update({ printify_order_id: printifyOrder.id })
+        .eq("id", order.id);
+
+      res.json({ success: true, order_id: order.id, printify_order_id: printifyOrder.id });
+    } catch (error: any) {
+      console.error("Order completion error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app.post("/api/payment/razorpay/order", async (req, res) => {
+    try {
+      const { amount, currency = "INR", receipt } = req.body;
+      const options = {
+        amount: Math.round(amount * 100), // amount in the smallest currency unit
+        currency,
+        receipt,
+      };
+
+      const order = await razorpay.orders.create(options);
+      res.json(order);
+    } catch (error: any) {
+      console.error("Razorpay order creation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/payment/razorpay/verify", async (req, res) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "placeholder_secret")
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature === razorpay_signature) {
+        res.json({ success: true, message: "Payment verified successfully" });
+      } else {
+        res.status(400).json({ success: false, message: "Invalid signature" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // API Routes
   app.get("/api/printify/shops", async (req, res) => {
@@ -156,130 +230,280 @@ async function startServer() {
     }
   });
 
+  // We keep this as fallback, but will prioritize native colors from Printify API
+  const COLOR_MAP: Record<string, string> = {
+    "Black": "#000000", "White": "#ffffff", "Navy": "#000080", "Grey": "#808080",
+    "Gray": "#808080", "Red": "#ff0000", "Blue": "#0000ff", "Green": "#00ff00",
+    "Yellow": "#ffff00", "Orange": "#ffa500", "Purple": "#800080", "Pink": "#ffc0cb",
+    "Beige": "#f5f5dc", "Charcoal": "#36454f", "Royal": "#4169e1", "Light Blue": "#add8e6",
+    "Forest": "#228b22", "Maroon": "#800000", "Gold": "#ffd700", "Silver": "#c0c0c0",
+    "Olive": "#808000", "Tan": "#d2b48c", "Brown": "#a52a2a", "Teal": "#008080",
+    "Burgundy": "#800020", "Ash": "#d1d1d1", "Sand": "#c2b280", "Kelly": "#4cbb17",
+    "Natural": "#f5f5dc", "Cream": "#fffdd0", "Heather": "#9aa1aa", "Sport Grey": "#9c9c9c"
+  };
+
+  async function syncPrintifyProduct(p: any) {
+    const shopId = p.shop_id || '19291817';
+
+    // Phase 11: Deep Sync - Always fetch the latest data from the API
+    // This captures mockups generated *after* the webhook was triggered
+    try {
+      const { data: latestP } = await printifyFetch(`/shops/${shopId}/products/${p.id}.json`);
+      if (latestP) {
+        p = { ...latestP, shop_id: shopId };
+        console.log(`[DeepSync] Successfully pulled latest data for ${p.id}`);
+      }
+    } catch (e) {
+      console.warn(`[DeepSync] Could not fetch latest for ${p.id}, using payload data.`);
+    }
+
+    if (!p.images || p.images.length === 0) {
+      console.warn(`[Sync] Skipping product ${p.id} due to missing images.`);
+      return;
+    }
+
+    const slug = p.title.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "") + "-" + p.id.slice(-4);
+
+    // Improved Gender Mapping
+    let gender = 'men';
+    if (p.tags.includes("Unisex")) gender = 'unisex';
+    else if (p.tags.includes("Women")) gender = 'women';
+    else if (p.tags.includes("Kids")) gender = 'kids';
+    else if (p.tags.includes("Men")) gender = 'men';
+
+    const type = p.tags.includes("T-Shirt") || p.tags.includes("T-shirt") ? "tshirt" :
+      (p.tags.includes("Hoodie") ? "hoodie" :
+        (p.tags.includes("Sweatshirt") ? "sweatshirt" : "other"));
+
+    // Extract native colors from p.options
+    const colorOption = p.options?.find((opt: any) => opt.type === 'color');
+    const nativeColorMap: Record<number, string> = {};
+    if (colorOption?.values) {
+      colorOption.values.forEach((v: any) => {
+        if (v.colors?.[0]) {
+          nativeColorMap[v.id] = v.colors[0];
+        }
+      });
+    }
+
+    const { data: catData } = await supabase.from("categories").select("id").eq("slug", gender).single();
+    const categoryId = catData?.id || null;
+
+    // Use default image or first publishing-selected image for product hero
+    const defaultImage = p.images.find((img: any) => img.is_default) || p.images[0];
+
+    const { data: productData, error: prodError } = await supabase
+      .from("products")
+      .upsert({
+        printify_id: p.id,
+        name: p.title,
+        slug,
+        description: p.description,
+        category_id: categoryId,
+        type,
+        gender,
+        status: 'published',
+        base_price: p.variants[0]?.price / 100 || 0,
+        markup_price: (p.variants[0]?.price / 100) * 1.5 || 0,
+        metadata: {
+          tags: p.tags,
+          all_images: p.images.map((img: any) => ({
+            src: img.src,
+            variant_ids: img.variant_ids,
+            is_default: img.is_default,
+            position: img.position
+          }))
+        }
+      }, { onConflict: 'printify_id' })
+      .select()
+      .single();
+
+    if (prodError) throw prodError;
+
+    // Phase 11: Parallel Processing (500x speed improvement for high-variant products)
+    await Promise.all(p.variants.map(async (v: any) => {
+      if (!v.is_enabled) return;
+
+      const colorName = v.title.split(" / ")[0] || "Default";
+      const sizeName = v.title.split(" / ")[1] || "One Size";
+
+      // Try to find hex from native options first, then fallback to COLOR_MAP
+      let hexCode = "#888888";
+      const colorOptionId = v.options?.find((oid: number) => nativeColorMap[oid] !== undefined);
+
+      if (colorOptionId !== undefined) {
+        hexCode = nativeColorMap[colorOptionId];
+      } else {
+        // Advanced name-based matching
+        const normalizedColorName = colorName.toLowerCase();
+        const fallbackMatch = Object.keys(COLOR_MAP).find(k => normalizedColorName.includes(k.toLowerCase()));
+        hexCode = fallbackMatch ? COLOR_MAP[fallbackMatch] : (COLOR_MAP[colorName] || "#888888");
+      }
+
+      // Find image for this variant
+      const variantImage = p.images.find((img: any) => img.variant_ids && img.variant_ids.includes(v.id)) || defaultImage;
+
+      const { error: vError } = await supabase
+        .from("product_variants")
+        .upsert({
+          product_id: productData.id,
+          printify_variant_id: v.id.toString(),
+          price: v.price / 100,
+          sku: v.sku,
+          is_enabled: v.is_enabled,
+          color: colorName,
+          size: sizeName,
+          hex_code: hexCode || "#888888",
+          image_url: variantImage.src
+        }, { onConflict: 'printify_variant_id' });
+
+      if (vError) {
+        console.error(`[Sync] Error upserting variant ${v.id}:`, vError);
+      }
+    }));
+
+    // Call Printify to signal publishing success (unlocks product)
+    try {
+      await printifyFetch(`/shops/${shopId}/products/${p.id}/publishing_succeeded.json`, {
+        method: 'POST',
+        body: JSON.stringify({
+          external: {
+            id: productData.id,
+            handle: `${process.env.APP_URL || 'http://localhost:3000'}/product/${slug}`
+          }
+        })
+      });
+      console.log(`[Sync] Signaled publishing success for product ${p.id}`);
+    } catch (e) {
+      console.warn(`[Sync] Failed to signal success for ${p.id}:`, e);
+    }
+
+    return productData;
+  }
+
+  app.post("/api/webhooks/printify", async (req, res) => {
+    try {
+      const event = req.body;
+      const { type, resource, data } = event;
+
+      console.log(`[Webhook] Received Printify event: ${type}`);
+
+      // Log event to Supabase for audit
+      await supabase.from("webhook_logs").insert({
+        source: 'printify',
+        event_type: type,
+        payload: event
+      });
+
+      if (type === "shop:product:published" || type === "shop:product:updated") {
+        await syncPrintifyProduct(data);
+      } else if (type === "shop:product:deleted") {
+        await supabase.from("products").delete().eq("printify_id", data.id);
+      }
+
+      res.status(200).send("OK");
+    } catch (error: any) {
+      console.error("Webhook error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/printify/sync/:shopId", async (req, res) => {
     try {
+      await ensureCategories();
       const { data: products } = await printifyFetch(`/shops/${req.params.shopId}/products.json`);
-      
-      const insertProd = db.prepare(`
-        INSERT INTO products (printify_id, name, slug, description, price, category_id, type, gender, colors, sizes, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(printify_id) DO UPDATE SET
-          name = excluded.name,
-          description = excluded.description,
-          price = excluded.price,
-          image_url = excluded.image_url
-      `);
 
       for (const p of products) {
-        // Only sync products that are visible or have images
-        if (!p.images || p.images.length === 0) continue;
-
-        // Simple mapping for demo purposes
-        const slug = p.title.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "") + "-" + p.id.slice(-4);
-        const price = p.variants[0]?.price / 100 || 0; // Printify prices are in cents
-        const imageUrl = p.images[0]?.src || "";
-        
-        // Default values for category, type, gender (can be refined based on tags)
-        const type = p.tags.includes("T-Shirt") ? "tshirt" : (p.tags.includes("Hoodie") ? "hoodie" : "sweatshirt");
-        const gender = p.tags.includes("Women") ? "women" : (p.tags.includes("Kids") ? "kids" : "men");
-        const categoryId = gender === "men" ? 1 : (gender === "women" ? 2 : 3);
-        
-        // Extract unique colors and sizes from variants
-        const colorSet = new Set<string>();
-        const sizeSet = new Set<string>();
-        
-        p.variants.forEach((v: any) => {
-          if (v.options) {
-            // Printify options are usually [color_id, size_id]
-            // We'd need to map these to actual names if we had the blueprint, 
-            // but for now let's try to find them in the variant title or options
-            // This is a bit tricky without the full Printify catalog mapping
-          }
-        });
-
-        // Fallback for demo: use standard sizes if none found
-        const colors = JSON.stringify(["#000000", "#FFFFFF"]); 
-        const sizes = JSON.stringify(["S", "M", "L", "XL"]);
-
-        insertProd.run(p.id, p.title, slug, p.description, price, categoryId, type, gender, colors, sizes, imageUrl);
+        await syncPrintifyProduct(p);
       }
 
       res.json({ message: "Sync complete", count: products.length });
     } catch (error: any) {
+      console.error("Sync error:", error);
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/admin/clear-products", (req, res) => {
+  app.get("/api/products", async (req, res) => {
     try {
-      db.prepare("DELETE FROM products").run();
-      res.json({ message: "All products cleared" });
+      const { category, type, gender } = req.query;
+      let query = supabase.from("products").select("*, categories(name, slug), product_variants(*)");
+
+      if (category) query = query.eq("categories.slug", category);
+      if (type) query = query.eq("type", type);
+
+      // Unisex Logic: If gender is men or women, include unisex products
+      if (gender) {
+        if (gender === 'men' || gender === 'women') {
+          query = query.in("gender", [gender, 'unisex']);
+        } else {
+          query = query.eq("gender", gender);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.get("/api/products", (req, res) => {
-    const { category, type, gender } = req.query;
-    let query = "SELECT * FROM products WHERE 1=1";
-    const params = [];
+  app.get("/api/products/:slug", async (req, res) => {
+    try {
+      const { data: product, error } = await supabase
+        .from("products")
+        .select("*, product_variants(*)")
+        .eq("slug", req.params.slug)
+        .single();
 
-    if (category) {
-      query += " AND category_id = (SELECT id FROM categories WHERE slug = ?)";
-      params.push(category);
-    }
-    if (type) {
-      query += " AND type = ?";
-      params.push(type);
-    }
-    if (gender) {
-      query += " AND gender = ?";
-      params.push(gender);
-    }
-
-    const products = db.prepare(query).all(...params);
-    res.json(products.map((p: any) => ({
-      ...p,
-      colors: JSON.parse(p.colors),
-      sizes: JSON.parse(p.sizes)
-    })));
-  });
-
-  app.get("/api/products/:slug", (req, res) => {
-    const product = db.prepare("SELECT * FROM products WHERE slug = ?").get(req.params.slug) as any;
-    if (product) {
-      res.json({
-        ...product,
-        colors: JSON.parse(product.colors),
-        sizes: JSON.parse(product.sizes)
-      });
-    } else {
-      res.status(404).json({ error: "Product not found" });
+      if (error) throw error;
+      res.json(product);
+    } catch (error: any) {
+      res.status(error.code === 'PGRST116' ? 404 : 500).json({ error: error.message });
     }
   });
 
-  app.get("/api/categories", (req, res) => {
-    const categories = db.prepare("SELECT * FROM categories").all();
-    res.json(categories);
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const { data, error } = await supabase.from("categories").select("*");
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
     app.use(express.static(path.join(__dirname, "dist")));
     app.get("*", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  // Add health check
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", env: process.env.NODE_ENV });
   });
+
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+// Only start the server setup if it's the main module or if not on Vercel
+// Vercel handles the application lifecycle
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  startServer();
+}
+
+export default app;

@@ -1,18 +1,37 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+export interface ProductVariant {
+  id: number;
+  product_id: number;
+  printify_variant_id: string;
+  color: string;
+  size: string;
+  hex_code: string;
+  price: number;
+  sku: string;
+  image_url: string;
+  is_enabled: boolean;
+}
+
 export interface Product {
   id: number;
+  printify_id: string;
   name: string;
   slug: string;
   description: string;
-  price: number;
   category_id: number;
   type: string;
   gender: string;
-  colors: string[];
-  sizes: string[];
-  image_url: string;
+  status: string;
+  markup_price: number;
+  base_price: number;
+  image_url?: string; // We'll often use the first variant image
+  product_variants?: ProductVariant[];
+  categories?: {
+    name: string;
+    slug: string;
+  };
 }
 
 export function cn(...inputs: ClassValue[]) {

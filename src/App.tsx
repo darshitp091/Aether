@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import Layout from './components/Layout';
@@ -8,11 +8,11 @@ import Category from './pages/Category';
 import Cart from './pages/Cart';
 import Wishlist from './pages/Wishlist';
 import Auth from './pages/Auth';
-import Admin from './pages/Admin';
+import { supabase } from './lib/supabase';
 
 function AnimatedRoutes() {
   const location = useLocation();
-  
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
@@ -46,11 +46,6 @@ function AnimatedRoutes() {
             <Auth />
           </motion.div>
         } />
-        <Route path="/admin" element={
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.5 }}>
-            <Admin />
-          </motion.div>
-        } />
         <Route path="*" element={<Home />} />
       </Routes>
     </AnimatePresence>
@@ -58,6 +53,38 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Sync profile function
+    const syncProfile = async (user: any) => {
+      try {
+        await supabase.from('users').upsert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || '',
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Error syncing profile:', err);
+      }
+    };
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        syncProfile(session.user);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        syncProfile(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <Router>
       <Layout>

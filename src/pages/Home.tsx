@@ -10,7 +10,7 @@ import Tilt from '../components/Tilt';
 import ThreeDImage from '../components/ThreeDImage';
 
 const Sticker = ({ children, className, rotate = 0 }: { children: React.ReactNode, className?: string, rotate?: number }) => (
-  <motion.div 
+  <motion.div
     drag
     dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
     whileHover={{ scale: 1.1, rotate: rotate + 5 }}
@@ -30,9 +30,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const { scrollYProgress } = useScroll();
   const addToCart = useStore((state) => state.addToCart);
-  
+
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
-  
+
   const immersiveY = useTransform(smoothProgress, [0.4, 0.7], [100, -100]);
   const immersiveScale = useTransform(smoothProgress, [0.4, 0.7], [0.8, 1.1]);
 
@@ -57,7 +57,7 @@ export default function Home() {
         <div className="marquee-content font-display text-4xl uppercase">
           {[...Array(10)].map((_, i) => (
             <span key={i} className="mx-12">
-              NEW DROP LIVE • LIMITED EDITION • FUTURE WEAR • AETHER WORLD • 
+              NEW DROP LIVE • LIMITED EDITION • FUTURE WEAR • AETHER WORLD •
             </span>
           ))}
         </div>
@@ -65,7 +65,7 @@ export default function Home() {
 
       {/* Featured Grid */}
       <section className="py-48 px-6 md:px-12 max-w-7xl mx-auto">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -50 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
@@ -86,61 +86,67 @@ export default function Home() {
           {loading ? (
             [...Array(6)].map((_, i) => <ProductSkeleton key={i} />)
           ) : (
-            featuredProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="group relative"
-              >
-                <Link to={`/product/${product.slug}`}>
-                  <div className="aspect-[3/4] overflow-hidden bg-zinc-900 mb-8 relative border-4 border-white group-hover:border-accent transition-all duration-300 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] group-hover:shadow-[8px_8px_0px_0px_rgba(0,255,0,1)]">
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
-                    />
-                    
-                    {/* Badge */}
-                    <div className="absolute top-0 right-0 bg-accent text-black px-4 py-2 text-xs font-bold uppercase tracking-widest z-10 border-l-2 border-b-2 border-black">
-                      {product.type}
-                    </div>
+            featuredProducts.map((product, index) => {
+              const displayImage = product.product_variants?.[0]?.image_url || product.image_url || (product as any).metadata?.all_images?.[0];
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group relative"
+                >
+                  <Link to={`/product/${product.slug}`}>
+                    <div className="aspect-[3/4] overflow-hidden bg-zinc-900 mb-8 relative border-4 border-white group-hover:border-accent transition-all duration-300 shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] group-hover:shadow-[8px_8px_0px_0px_rgba(0,255,0,1)]">
+                      <img
+                        src={displayImage}
+                        alt={product.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700"
+                      />
 
-                    {/* Quick Add Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/40 backdrop-blur-sm">
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          addToCart(product, product.colors[0], product.sizes[0]);
-                        }}
-                        className="brutal-btn bg-accent text-black scale-90 group-hover:scale-100 transition-transform"
-                      >
-                        ADD TO BAG +
-                      </button>
+                      {/* Badge */}
+                      <div className="absolute top-0 right-0 bg-accent text-black px-4 py-2 text-xs font-bold uppercase tracking-widest z-10 border-l-2 border-b-2 border-black">
+                        {product.type}
+                      </div>
+
+                      {/* Quick Add Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 bg-black/40 backdrop-blur-sm">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const variants = product.product_variants || [];
+                            const color = variants[0]?.color || "Default";
+                            const size = variants[0]?.size || "One Size";
+                            addToCart(product, color, size);
+                          }}
+                          className="brutal-btn bg-accent text-black scale-90 group-hover:scale-100 transition-transform"
+                        >
+                          ADD TO BAG +
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-start px-2">
-                    <div>
-                      <h3 className="text-4xl font-display mb-2 group-hover:text-accent transition-colors uppercase">{product.name}</h3>
-                      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">{product.gender} // {product.type}</p>
+                    <div className="flex justify-between items-start px-2">
+                      <div>
+                        <h3 className="text-4xl font-display mb-2 group-hover:text-accent transition-colors uppercase leading-none tracking-tight">{product.name}</h3>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">{product.gender} // {product.type}</p>
+                      </div>
+                      <span className="text-3xl font-display text-accent">{formatPrice(product.markup_price)}</span>
                     </div>
-                    <span className="text-3xl font-display text-accent">{formatPrice(product.price)}</span>
-                  </div>
-                </Link>
-              </motion.div>
-            ))
+                  </Link>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </section>
 
       {/* AETHER LAB Section */}
       <section className="py-48 px-6 md:px-12 bg-black overflow-hidden relative border-y-4 border-white">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" 
-             style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
-        
+        <div className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
+
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-24 items-center relative z-10">
           <div className="lg:col-span-7 relative group">
             <Tilt>
@@ -153,17 +159,17 @@ export default function Home() {
                   <circle cx="60" cy="40" r="1" fill="#00FF66" />
                 </svg>
 
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   className="relative h-full w-full border-2 border-white/20 p-8 bg-zinc-900/50 backdrop-blur-sm"
                 >
-                  <ThreeDImage 
-                    src="https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80" 
+                  <ThreeDImage
+                    src="https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80"
                     className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-1000"
                   />
-                  
+
                   {/* Hotspots */}
                   {[
                     { top: '25%', left: '40%', label: 'HEAVY_COTTON_450GSM' },
@@ -205,7 +211,7 @@ export default function Home() {
               <p className="font-mono text-white/40 text-lg uppercase tracking-widest leading-relaxed mb-12">
                 EXPLORE THE TECHNICAL SPECIFICATIONS OF OUR CORE PIECES. EVERY GARMENT IS ENGINEERED FOR DURABILITY, COMFORT, AND DIGITAL INTEGRATION.
               </p>
-              
+
               <div className="space-y-6">
                 {[
                   { title: 'MATERIAL', value: 'PREMIUM_HEAVYWEIGHT_COTTON' },
@@ -234,24 +240,24 @@ export default function Home() {
       {/* Gen Z Fashion Video Section */}
       <section className="py-24 px-6 md:px-12 bg-black overflow-hidden relative border-t-4 border-white">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="relative aspect-[21/9] w-full border-4 border-white overflow-hidden group shadow-[20px_20px_0px_0px_rgba(255,255,255,0.1)]"
           >
-            <video 
-              autoPlay 
-              loop 
-              muted 
+            <video
+              autoPlay
+              loop
+              muted
               playsInline
               className="w-full h-full object-cover transition-all duration-1000 transform group-hover:scale-105"
             >
               <source src="https://assets.mixkit.co/videos/preview/mixkit-diverse-group-of-friends-walking-together-in-the-city-33880-large.mp4" type="video/mp4" />
             </video>
             <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-1000" />
-            
+
             {/* HUD Overlay */}
             <div className="absolute top-8 left-8 flex flex-col gap-2 z-20">
               <div className="flex items-center gap-4">
@@ -262,7 +268,7 @@ export default function Home() {
                 FEATURING: ALL_AGES_OVERSIZE_CORE
               </div>
             </div>
-            
+
             <div className="absolute bottom-8 right-8 z-20">
               <div className="font-display text-4xl md:text-6xl text-white uppercase tracking-tighter leading-none text-right">
                 STREET <br /> <span className="outline-text-white">CULTURE</span>
@@ -284,7 +290,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-        
+
         <div className="relative z-10 text-center px-6 max-w-6xl">
           <span className="font-mono text-sm tracking-[1em] mb-12 block">[ MANIFESTO_V1.0 ]</span>
           <h2 className="text-7xl md:text-[12vw] leading-[0.75] font-display mb-16 uppercase tracking-tighter">
@@ -298,7 +304,7 @@ export default function Home() {
               <p className="text-lg font-mono uppercase tracking-wider leading-relaxed">
                 WE DEFINE THE BOUNDARIES BETWEEN THE PHYSICAL AND THE VIRTUAL. OUR PIECES ARE DIGITAL ASSETS FOR THE REAL WORLD.
               </p>
-              <Link 
+              <Link
                 to="/about"
                 className="brutal-btn bg-black text-white hover:bg-white hover:text-black inline-block"
               >
@@ -317,8 +323,8 @@ export default function Home() {
       {/* Categories Split */}
       <section className="grid grid-cols-1 md:grid-cols-2 h-screen border-t-4 border-white">
         <Link to="/category/men" className="relative group overflow-hidden border-r-4 border-white">
-          <img 
-            src="https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&w=1000&q=80" 
+          <img
+            src="https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&w=1000&q=80"
             className="absolute inset-0 w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"
             referrerPolicy="no-referrer"
           />
@@ -328,8 +334,8 @@ export default function Home() {
           </div>
         </Link>
         <Link to="/category/women" className="relative group overflow-hidden">
-          <img 
-            src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80" 
+          <img
+            src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=80"
             className="absolute inset-0 w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"
             referrerPolicy="no-referrer"
           />

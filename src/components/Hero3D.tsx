@@ -1,23 +1,24 @@
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { 
-  Float, 
-  Sphere, 
-  Torus, 
-  MeshTransmissionMaterial, 
-  Environment, 
-  ContactShadows, 
-  Text, 
-  ScrollControls, 
+import {
+  Float,
+  Sphere,
+  Torus,
+  MeshTransmissionMaterial,
+  Environment,
+  ContactShadows,
+  Text,
+  ScrollControls,
   useScroll,
   PerspectiveCamera
 } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Vignette, DepthOfField } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, ChromaticAberration, Vignette, DepthOfField, Glitch, Noise } from '@react-three/postprocessing';
+import { GlitchMode } from 'postprocessing';
 import * as THREE from 'three';
 
 function AnimatedSphere() {
   const meshRef = useRef<THREE.Mesh>(null!);
-  
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     meshRef.current.rotation.x = time * 0.1;
@@ -49,7 +50,7 @@ function AnimatedSphere() {
 
 function FloatingRing({ position, scale, speed, rotationSpeed, color }: { position: [number, number, number], scale: number, speed: number, rotationSpeed: number, color: string }) {
   const meshRef = useRef<THREE.Mesh>(null!);
-  
+
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     meshRef.current.rotation.z = time * rotationSpeed;
@@ -133,20 +134,29 @@ function Scene() {
       <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} color="#00FF00" />
       <pointLight position={[-10, -10, -10]} intensity={1.5} color="#00FF00" />
       <pointLight position={[10, -10, 5]} intensity={1.5} color="#ffffff" />
-      
+
       <AnimatedSphere />
       <ThreeDTypography />
-      
+
       <FloatingRing position={[0, 0, 0]} scale={2.8} speed={1} rotationSpeed={0.2} color="#00FF00" />
       <FloatingRing position={[0, 0, 0]} scale={3.2} speed={1.5} rotationSpeed={-0.15} color="#ffffff" />
       <FloatingRing position={[0, 0, 0]} scale={3.6} speed={0.8} rotationSpeed={0.1} color="#00FF00" />
-      
+
       <Environment preset="city" />
       <ContactShadows position={[0, -3.5, 0]} opacity={0.4} scale={20} blur={2} far={4.5} />
 
-      <EffectComposer>
-        <Bloom luminanceThreshold={1} mipmapBlur intensity={2} radius={0.5} />
-        <ChromaticAberration offset={new THREE.Vector2(0.005, 0.005)} />
+      <EffectComposer enableNormalPass={false}>
+        <Bloom luminanceThreshold={1} mipmapBlur intensity={1.5} radius={0.4} />
+        <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
+        <Glitch
+          delay={new THREE.Vector2(1.5, 3.5)}
+          duration={new THREE.Vector2(0.1, 0.3)}
+          strength={new THREE.Vector2(0.05, 0.1)}
+          mode={GlitchMode.SPORADIC}
+          active
+          ratio={0.85}
+        />
+        <Noise opacity={0.05} />
         <Vignette eskil={false} offset={0.1} darkness={1.1} />
         <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} />
       </EffectComposer>

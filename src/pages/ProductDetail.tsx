@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, ShoppingBag, ChevronRight, Star, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
+import { Heart, ShoppingBag, ChevronRight, Star, ShieldCheck, Truck, RotateCcw, Share2, Ruler } from 'lucide-react';
 import { useStore } from '../store';
 import { formatPrice, cn, Product } from '../utils';
-import ProductConfigurator3D from '../components/ProductConfigurator3D';
+
+// Helper to clean description while keeping some structure if needed
+// However, since we now support HTML in the UI, we just export a cleaner for lines if we want plain text
+const formatDescriptionLines = (desc: string) => {
+  if (!desc) return null;
+  // If it's HTML, we'll render it directly. If we want lines, we strip tags.
+  return desc.replace(/<[^>]*>?/gm, '').split('\n').filter(line => line.trim() !== '');
+};
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -12,7 +19,8 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'shipping' | 'reviews'>('details');
-  
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
   const addToCart = useStore((state) => state.addToCart);
   const toggleWishlist = useStore((state) => state.toggleWishlist);
   const wishlist = useStore((state) => state.wishlist);
@@ -22,180 +30,258 @@ export default function ProductDetail() {
       .then(res => res.json())
       .then(data => {
         setProduct(data);
-        if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
-        if (data.sizes?.length > 0) setSelectedSize(data.sizes[0]);
+        const variants = (data.product_variants || []).filter((v: any) => v.is_enabled);
+        const uniqueColors = Array.from(new Set(variants.map((v: any) => v.color))).filter(Boolean) as string[];
+        const uniqueSizes = Array.from(new Set(variants.map((v: any) => v.size))).filter(Boolean) as string[];
+
+        if (uniqueColors.length > 0) setSelectedColor(uniqueColors[0]);
+        if (uniqueSizes.length > 0) setSelectedSize(uniqueSizes[0]);
       });
   }, [slug]);
 
-  if (!product) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  if (!product) return (
+    <div className="h-screen flex items-center justify-center bg-black">
+      <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   const isWishlisted = wishlist.some(p => p.id === product.id);
+  const variants = (product.product_variants || []).filter(v => v.is_enabled);
+
+  // Get unique colors from enabled variants only
+  const colors = Array.from(new Set(variants.map(v => v.color)))
+    .map(colorName => {
+      const v = variants.find(v => v.color === colorName);
+      return { name: colorName, hex: v?.hex_code || "#888888" };
+    });
+
+  // Get unique sizes from enabled variants only
+  const sizes = Array.from(new Set(variants.map(v => v.size))).filter(Boolean);
+
+  // Gallery logic: merge primary variant images + metadata gallery
+  const gallery = Array.from(new Set([
+    ...(variants.map(v => v.image_url)),
+    ...((product as any).metadata?.all_images || [])
+  ])).filter(Boolean);
+
+  const currentVariant = variants.find(v => v.color === selectedColor && v.size === selectedSize) || variants[0];
+  const mainImage = gallery[activeImageIndex] || currentVariant?.image_url;
+  // Keep the breakdown but we might use dangerouslySetInnerHTML for better formatting
+  const descriptionLines = formatDescriptionLines(product.description);
+
+  // Auto-switch image when color changes
+  const handleColorChange = (color: string) => {
+    setSelectedColor(color);
+    // Find the first image that belongs to this color's variants
+    const colorVariants = variants.filter(v => v.color === color);
+    const colorVariantIds = colorVariants.map(v => v.printify_variant_id);
+
+    // Check metadata.all_images for a match
+    const allImages = (product as any).metadata?.all_images || [];
+    const matchIndex = allImages.findIndex((img: any) =>
+      img.variant_ids && img.variant_ids.some((vid: any) => colorVariantIds.includes(vid.toString()))
+    );
+
+    if (matchIndex !== -1) {
+      // Find where this image is in the 'gallery' array
+      const galleryIndex = gallery.indexOf(allImages[matchIndex].src);
+      if (galleryIndex !== -1) {
+        setActiveImageIndex(galleryIndex);
+      }
+    } else {
+      // Fallback: look for the variant's own image_url in the gallery
+      const variantImage = colorVariants[0]?.image_url;
+      if (variantImage) {
+        const galleryIndex = gallery.indexOf(variantImage);
+        if (galleryIndex !== -1) {
+          setActiveImageIndex(galleryIndex);
+        }
+      }
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 md:px-12 py-24">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
-        {/* Left: 3D View */}
-        <motion.div 
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="relative bg-[#111] border-4 border-white overflow-hidden min-h-[600px] shadow-[12px_12px_0px_0px_rgba(255,255,255,1)]"
-        >
-          <div className="absolute top-8 left-8 z-10">
-            <span className="text-[10px] font-mono uppercase tracking-[0.5em] text-accent block mb-2">[ 3D_CONFIGURATOR ]</span>
-            <h2 className="text-2xl font-display uppercase tracking-widest">INTERACTIVE</h2>
-          </div>
-          <ProductConfigurator3D type={product.type} color={selectedColor} />
-          
-          {/* Decorative Corner */}
-          <div className="absolute bottom-0 right-0 w-24 h-24 bg-accent flex items-center justify-center rotate-45 translate-x-12 translate-y-12">
-            <ShoppingBag className="-rotate-45 text-black" size={24} />
-          </div>
-        </motion.div>
+    <div className="bg-black text-white min-h-screen">
+      <div className="max-w-[1800px] mx-auto px-6 md:px-12 py-24">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest text-white/40 mb-12">
+          <Link to="/" className="hover:text-accent transition-colors">HOME</Link>
+          <ChevronRight size={10} />
+          <Link to={`/category/${product.gender}`} className="hover:text-accent transition-colors">{product.gender}</Link>
+          <ChevronRight size={10} />
+          <span className="text-white opacity-50 truncate max-w-[200px]">{product.name}</span>
+        </nav>
 
-        {/* Right: Details */}
-        <motion.div 
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col"
-        >
-          <div className="mb-12">
-            <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest text-white/40 mb-8">
-              <Link to="/" className="hover:text-accent transition-colors">HOME</Link>
-              <span>//</span>
-              <Link to={`/category/${product.gender}`} className="hover:text-accent transition-colors">{product.gender}</Link>
-              <span>//</span>
-              <span className="text-white">{product.name}</span>
-            </div>
-            
-            <h1 className="text-7xl md:text-9xl font-display leading-[0.75] mb-8 uppercase tracking-tighter">
-              {product.name.split(' ').map((word, i) => (
-                <span key={i} className={i % 2 === 1 ? "outline-text" : ""}>
-                  {word}{' '}
-                </span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-start">
+          {/* Left: Sticky Image Gallery */}
+          <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-12 gap-6 sticky top-24">
+            {/* Thumbnails */}
+            <div className="md:col-span-2 flex md:flex-col gap-4 order-2 md:order-1 overflow-x-auto md:overflow-y-auto no-scrollbar max-h-[800px]">
+              {gallery.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImageIndex(i)}
+                  className={cn(
+                    "aspect-square w-20 md:w-full border-2 transition-all p-1 bg-zinc-900 flex-shrink-0 group relative",
+                    activeImageIndex === i ? "border-accent" : "border-white/5 hover:border-white/20"
+                  )}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover grayscale group-hover:grayscale-0" referrerPolicy="no-referrer" />
+                </button>
               ))}
-            </h1>
-            
-            <div className="flex items-center gap-10 mb-12">
-              <span className="text-5xl font-display text-accent bg-white text-black px-4 py-1 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,255,102,1)]">{formatPrice(product.price)}</span>
-              <div className="flex items-center gap-2 text-accent">
-                {[...Array(5)].map((_, i) => <Star key={i} size={20} fill={i < 4 ? "currentColor" : "none"} />)}
-                <span className="text-sm font-mono text-white/40 ml-6 uppercase tracking-widest">[ 128_VERIFIED_REVIEWS ]</span>
+            </div>
+
+            {/* Main Stage */}
+            <div className="md:col-span-10 order-1 md:order-2">
+              <motion.div
+                key={mainImage}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="aspect-[4/5] bg-zinc-900 border-2 border-white/10 relative overflow-hidden group"
+              >
+                <img
+                  src={mainImage}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute top-6 left-6 flex flex-col gap-3">
+                  <div className="bg-accent text-black px-4 py-1 text-[10px] font-black uppercase tracking-widest">
+                    NEW_DROP
+                  </div>
+                  <div className="bg-white text-black px-4 py-1 text-[10px] font-black uppercase tracking-widest">
+                    {product.type}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => toggleWishlist(product)}
+                  className={cn(
+                    "absolute top-6 right-6 w-12 h-12 flex items-center justify-center border-2 transition-all z-10",
+                    isWishlisted ? "bg-white text-black border-white" : "bg-black/40 border-white/20 hover:border-accent hover:text-accent backdrop-blur-md"
+                  )}
+                >
+                  <Heart size={20} fill={isWishlisted ? "currentColor" : "none"} />
+                </button>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Right: Buy Box */}
+          <div className="lg:col-span-5">
+            <header className="mb-12">
+              <h1 className="text-5xl md:text-6xl font-display uppercase tracking-tight leading-[1] mb-8 max-w-2xl">
+                {product.name}
+              </h1>
+
+              <div className="flex items-center gap-8 mb-8">
+                <span className="text-4xl font-display text-accent">{formatPrice(product.markup_price)}</span>
+                <div className="h-4 w-px bg-white/20"></div>
+                <div className="flex items-center gap-1 text-accent">
+                  <Star size={16} fill="currentColor" />
+                  <Star size={16} fill="currentColor" />
+                  <Star size={16} fill="currentColor" />
+                  <Star size={16} fill="currentColor" />
+                  <Star size={16} fill="none" />
+                  <span className="text-[10px] font-mono text-white/40 ml-2 mt-1">4.8 (124)</span>
+                </div>
+              </div>
+
+              <div
+                className="prose prose-invert prose-xs space-y-4 text-white/60 font-mono text-xs uppercase tracking-wider leading-relaxed mb-12 max-w-xl product-description"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            </header>
+
+            {/* Selection Area */}
+            <div className="space-y-12">
+              {/* Colors */}
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">COLORway // {selectedColor}</h3>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  {colors.map(c => (
+                    <button
+                      key={c.name}
+                      onClick={() => handleColorChange(c.name)}
+                      title={c.name}
+                      className={cn(
+                        "w-10 h-10 border-2 transition-all p-1",
+                        selectedColor === c.name ? "border-accent scale-110 shadow-[0_0_15px_rgba(0,255,102,0.3)]" : "border-white/10 hover:border-white/40"
+                      )}
+                    >
+                      <div className="w-full h-full" style={{ backgroundColor: c.hex }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sizes */}
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">SIZE_MATRIX</h3>
+                  <button className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-accent hover:underline">
+                    <Ruler size={12} /> SIZE_GUIDE
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {sizes.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedSize(s)}
+                      className={cn(
+                        "h-14 flex items-center justify-center border-2 font-display text-lg uppercase tracking-widest transition-all",
+                        selectedSize === s ? "bg-accent text-black border-accent" : "border-white/10 hover:border-white text-white/60"
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cart Action */}
+              <div className="pt-6">
+                <button
+                  onClick={() => addToCart(product, selectedColor, selectedSize)}
+                  className="w-full h-24 bg-white text-black font-display text-2xl uppercase tracking-[0.2em] flex items-center justify-center gap-6 hover:bg-accent transition-all active:scale-95 group shadow-[8px_8px_0px_0px_rgba(0,255,102,1)]"
+                >
+                  <ShoppingBag className="group-hover:translate-y-[-2px] transition-transform" />
+                  ACQUIRE_PIECE
+                </button>
+
+                <p className="mt-8 font-mono text-[9px] text-center text-white/20 uppercase tracking-[0.3em]">
+                  GUARANTEED SECURE_CHECKOUT via RAZORPAY // SSL_ENCRYPTED
+                </p>
+              </div>
+
+              {/* Tabs / Info */}
+              <div className="pt-16 border-t-2 border-white/5">
+                <div className="space-y-6">
+                  <div className="group cursor-pointer">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-display text-xl uppercase tracking-widest text-white group-hover:text-accent transition-all">Materials & Care</h4>
+                      <ChevronRight size={16} className="text-white/20" />
+                    </div>
+                    <p className="text-sm text-white/40 font-mono uppercase leading-relaxed hidden group-hover:block">
+                      100% Premium Cotton // Heavyweight 240GSM // Cold wash only // Do not bleach
+                    </p>
+                  </div>
+                  <div className="group cursor-pointer">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-display text-xl uppercase tracking-widest text-white group-hover:text-accent transition-all">Shipping & Origin</h4>
+                      <ChevronRight size={16} className="text-white/20" />
+                    </div>
+                    <p className="text-sm text-white/40 font-mono uppercase leading-relaxed hidden group-hover:block">
+                      Free Global Shipping // Shipped from AETHER Hub // 5-10 Business Days
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <p className="text-white/70 leading-relaxed font-light text-xl max-w-xl">
-              {product.description}
-            </p>
           </div>
-
-          {/* Color Selection */}
-          <div className="mb-10">
-            <h3 className="font-mono text-xs uppercase tracking-[0.3em] mb-6 text-white/40">SELECT_COLOR: <span className="text-accent">{selectedColor}</span></h3>
-            <div className="flex gap-4">
-              {product.colors.map(color => (
-                <button
-                  key={color}
-                  onClick={() => setSelectedColor(color)}
-                  className={cn(
-                    "w-12 h-12 rounded-none border-2 transition-all p-1",
-                    selectedColor === color ? "border-accent scale-110" : "border-white/20 hover:border-white"
-                  )}
-                >
-                  <div className="w-full h-full" style={{ backgroundColor: color }} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Size Selection */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-mono text-xs uppercase tracking-[0.3em] text-white/40">SELECT_SIZE</h3>
-              <button className="font-mono text-[10px] uppercase tracking-widest text-accent hover:underline underline-offset-4">SIZE_GUIDE</button>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              {product.sizes.map(size => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={cn(
-                    "min-w-[80px] h-14 flex items-center justify-center border-2 font-display text-xl uppercase tracking-widest transition-all",
-                    selectedSize === size ? "bg-accent text-black border-accent" : "border-white/10 hover:border-white"
-                  )}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-6 mb-16">
-            <button 
-              onClick={() => addToCart(product, selectedColor, selectedSize)}
-              className="brutal-btn flex-1 flex items-center justify-center gap-4"
-            >
-              <ShoppingBag size={24} />
-              ADD TO BAG
-            </button>
-            <button 
-              onClick={() => toggleWishlist(product)}
-              className={cn(
-                "w-20 h-20 border-2 flex items-center justify-center transition-all",
-                isWishlisted ? "bg-white text-black border-white" : "border-white/10 hover:border-accent hover:text-accent"
-              )}
-            >
-              <Heart size={28} fill={isWishlisted ? "currentColor" : "none"} />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-t-2 border-white/10">
-            <div className="flex gap-12 mb-8">
-              {['details', 'shipping', 'reviews'].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab as any)}
-                  className={cn(
-                    "py-8 font-display text-2xl uppercase tracking-widest transition-all relative",
-                    activeTab === tab ? "text-accent" : "text-white/40 hover:text-white"
-                  )}
-                >
-                  {tab}
-                  {activeTab === tab && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="text-lg text-white/60 leading-relaxed font-light min-h-[150px]">
-              <AnimatePresence mode="wait">
-                {activeTab === 'details' && (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-                    <ul className="space-y-6 font-mono text-sm uppercase tracking-wider">
-                      <li className="flex items-center gap-4"><ShieldCheck className="text-accent" size={20} /> [ ETHICALLY SOURCED PREMIUM MATERIALS ]</li>
-                      <li className="flex items-center gap-4"><ChevronRight className="text-accent" size={20} /> [ REINFORCED SEAMS FOR DURABILITY ]</li>
-                      <li className="flex items-center gap-4"><ChevronRight className="text-accent" size={20} /> [ SIGNATURE MINIMALIST BRANDING ]</li>
-                    </ul>
-                  </motion.div>
-                )}
-                {activeTab === 'shipping' && (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-                    <ul className="space-y-6 font-mono text-sm uppercase tracking-wider">
-                      <li className="flex items-center gap-4"><Truck className="text-accent" size={20} /> [ FREE EXPRESS SHIPPING OVER $250 ]</li>
-                      <li className="flex items-center gap-4"><RotateCcw className="text-accent" size={20} /> [ 30-DAY COMPLIMENTARY RETURNS ]</li>
-                    </ul>
-                  </motion.div>
-                )}
-                {activeTab === 'reviews' && (
-                  <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-                    <p className="font-mono text-sm uppercase tracking-wider opacity-50">NO REVIEWS YET FOR THIS SPECIFIC COLORWAY. BE THE FIRST TO SHARE YOUR EXPERIENCE.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
