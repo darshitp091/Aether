@@ -14,6 +14,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const app = express();
+
+// 1. WEBHOOK HANDSHAKE (Satisfies Printify 9004 validation error)
+// Must be ABOVE express.json() to handle empty/malformed validation pings
+app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res, next) => {
+  if (req.method === 'GET' || (req.method === 'POST' && (!req.headers['content-length'] || req.headers['content-length'] === '0'))) {
+    console.log(`[Webhook] Pre-middleware Handshake triggered (${req.method})`);
+    return res.status(200).json({ status: "ok", mode: "handshake" });
+  }
+  next();
+});
+
 app.use(express.json());
 
 // Production optimization
@@ -667,7 +678,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "17.0",
+    version: "17.1",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
