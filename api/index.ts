@@ -532,6 +532,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
+    version: "16.3",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
