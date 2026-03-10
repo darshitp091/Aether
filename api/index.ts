@@ -448,7 +448,16 @@ async function syncPrintifyProduct(p: any) {
       source: 'manual_sync_engine',
       level: 'info',
       message: `Product ${p.id} (${p.title}) synced successfully.`,
-      payload: { printify_id: p.id, slug }
+      payload: {
+        printify_id: p.id,
+        slug,
+        debug: {
+          colorIndex: colorOptionIndex,
+          sizeIndex: sizeOptionIndex,
+          options: p.options.map((o: any) => ({ name: o.name, type: o.type })),
+          sampleTitle: p.variants[0]?.title
+        }
+      }
     });
   } catch (e) {
     console.warn(`[Sync] Failed to signal success for ${p.id}:`, e);
@@ -631,7 +640,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.6",
+    version: "16.7",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
