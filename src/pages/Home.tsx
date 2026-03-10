@@ -37,6 +37,7 @@ export default function Home() {
   const immersiveScale = useTransform(smoothProgress, [0.4, 0.7], [0.8, 1.1]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {

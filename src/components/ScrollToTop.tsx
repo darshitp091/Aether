@@ -10,10 +10,16 @@ export default function ScrollToTop() {
     const { pathname } = useLocation();
 
     useEffect(() => {
-        // We use a slight delay or requestAnimationFrame to ensure the scroll happens
-        // after the new page content has at least started rendering, though simple
-        // scrollTo(0,0) usually works fine with React Router.
-        window.scrollTo(0, 0);
+        // requestAnimationFrame ensures we scroll after the next paint,
+        // which helps if the page is still rendering or the browser is 
+        // trying to restore scroll position.
+        const resetScroll = () => {
+            window.scrollTo(0, 0);
+            // Double tap for stubborn browsers/animations
+            setTimeout(() => window.scrollTo(0, 0), 0);
+        };
+
+        requestAnimationFrame(resetScroll);
     }, [pathname]);
 
     return null;
