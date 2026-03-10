@@ -58,11 +58,16 @@ export default function ProductDetail() {
   // Get unique sizes from enabled variants only
   const sizes = Array.from(new Set(variants.map(v => v.size))).filter(Boolean);
 
-  // Gallery logic: merge primary variant images + metadata gallery
-  const gallery = Array.from(new Set([
-    ...(variants.map(v => v.image_url)),
-    ...((product as any).metadata?.all_images || [])
-  ])).filter(Boolean);
+  // Gallery logic: merge variant images + all mockup images from metadata
+  // metadata.all_images contains objects { src, variant_ids, is_default, position }
+  const metadataImages = ((product as any).metadata?.all_images || [])
+    .map((img: any) => typeof img === 'string' ? img : img?.src)
+    .filter(Boolean);
+
+  const variantImages = variants.map(v => v.image_url).filter(Boolean);
+
+  // Deduplicated gallery: variant images first, then any additional metadata images
+  const gallery = Array.from(new Set([...variantImages, ...metadataImages]));
 
   const currentVariant = variants.find(v => v.color === selectedColor && v.size === selectedSize) || variants[0];
   const mainImage = gallery[activeImageIndex] || currentVariant?.image_url;
