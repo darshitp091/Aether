@@ -441,8 +441,14 @@ async function syncPrintifyProduct(p: any) {
 app.post("/api/webhooks/printify", async (req, res) => {
   try {
     const event = req.body;
-    const { type, resource, data } = event;
 
+    // Validation check: Printify sometimes sends a ping with empty body or different structure
+    if (!event || !event.type) {
+      console.log("[Webhook] Received empty or invalid event for validation:", event);
+      return res.status(200).send("OK");
+    }
+
+    const { type, resource, data } = event;
     console.log(`[Webhook] Received Printify event: ${type}`);
 
     // Log event to Supabase for audit
