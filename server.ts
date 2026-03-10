@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import axios from "axios";
 
 dotenv.config();
 
@@ -38,13 +39,16 @@ const razorpay = new Razorpay({
 const PRINTIFY_API_BASE = "https://api.printify.com/v1";
 const PRINTIFY_API_KEY = process.env.PRINTIFY_API_KEY;
 
-async function printifyFetch(endpoint: string, options: RequestInit = {}) {
+async function printifyFetch(endpoint: string, options: any = {}) {
+  const PRINTIFY_API_KEY = process.env.PRINTIFY_API_KEY;
   if (!PRINTIFY_API_KEY) {
     throw new Error("PRINTIFY_API_KEY is not set");
   }
 
-  const response = await fetch(`${PRINTIFY_API_BASE}${endpoint}`, {
-    ...options,
+  const response = await axios({
+    url: `${PRINTIFY_API_BASE}${endpoint}`,
+    method: options.method || 'GET',
+    data: options.body ? JSON.parse(options.body) : undefined,
     headers: {
       "Authorization": `Bearer ${PRINTIFY_API_KEY}`,
       "Content-Type": "application/json",
@@ -52,12 +56,7 @@ async function printifyFetch(endpoint: string, options: RequestInit = {}) {
     },
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || `Printify API error: ${response.status}`);
-  }
-
-  return response.json();
+  return response.data;
 }
 
 // Base sync function for categories
@@ -474,7 +473,16 @@ app.get("/api/categories", async (req, res) => {
 
 // Health check
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", env: process.env.NODE_ENV, vercel: !!process.env.VERCEL });
+  res.json({
+    status: "ok",
+    env: process.env.NODE_ENV,
+    vercel: !!process.env.VERCEL,
+    env_check: {
+      supabase: !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      printify: !!process.env.PRINTIFY_API_KEY,
+      razorpay: !!process.env.RAZORPAY_KEY_ID && !!process.env.RAZORPAY_KEY_SECRET
+    }
+  });
 });
 
 async function startServer() {
