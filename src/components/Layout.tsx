@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, Heart, Search, Menu, X, User, ChevronRight } from 'lucide-react';
 import { useStore } from '../store';
@@ -9,9 +9,11 @@ import GlobalBackground3D from './GlobalBackground3D';
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const cart = useStore((state) => state.cart);
   const wishlist = useStore((state) => state.wishlist);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -113,7 +115,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item}
                     to={item === 'Drops' ? '/collections' : item === 'Manifesto' ? '/about' : `/category/${item.toLowerCase()}`}
-                    className="text-7xl md:text-[10vw] font-display leading-[0.8] hover:text-accent hover:translate-x-8 transition-all flex items-center gap-8 group uppercase tracking-tighter"
+                    className="text-6xl md:text-[8vw] font-display leading-[0.9] hover:text-accent hover:translate-x-4 transition-all flex items-center gap-6 group uppercase tracking-tighter"
                   >
                     <span className="text-2xl font-mono text-black/10 group-hover:text-accent transition-colors">0{i + 1}</span>
                     {item}
@@ -159,15 +161,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   autoFocus
                   type="text"
                   placeholder="ENTER_QUERY..."
-                  className="w-full bg-transparent border-b-[12px] border-black py-12 text-7xl md:text-[12vw] font-display leading-none focus:outline-none placeholder:text-black/10 uppercase tracking-tighter"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      setIsSearchOpen(false);
+                      navigate(`/category/all?q=${encodeURIComponent(searchQuery.trim())}`);
+                      setSearchQuery('');
+                    }
+                  }}
+                  className="w-full bg-transparent border-b-[12px] border-black py-12 text-7xl md:text-[8vw] font-display leading-none focus:outline-none placeholder:text-black/10 uppercase tracking-tighter"
                 />
                 <Search size={80} className="absolute right-0 top-1/2 -translate-y-1/2 opacity-20" />
               </div>
               <div className="mt-20 flex flex-wrap gap-12 text-2xl font-display uppercase tracking-widest">
-                <span className="bg-black text-white px-4 py-1">TRENDING:</span>
-                {['HOODIES', 'TEES', 'CARGOS', 'ACCESSORIES'].map(tag => (
-                  <Link key={tag} to={`/category/men?type=${tag.toLowerCase()}`} className="hover:text-white transition-colors border-b-4 border-transparent hover:border-black">
-                    {tag}
+                <span className="bg-black text-white px-4 py-1">LATEST:</span>
+                {['MEN', 'WOMEN', 'KIDS', 'UNISEX'].map(cat => (
+                  <Link
+                    key={cat}
+                    to={`/category/${cat.toLowerCase()}`}
+                    className="hover:text-white transition-colors border-b-4 border-transparent hover:border-black"
+                    onClick={() => setIsSearchOpen(false)}
+                  >
+                    {cat}
                   </Link>
                 ))}
               </div>

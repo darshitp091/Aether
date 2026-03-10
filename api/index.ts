@@ -533,9 +533,19 @@ app.get("/api/products", async (req, res) => {
     if (category) query = query.eq("categories.slug", category);
     if (type) query = query.eq("type", type);
 
-    // Strict Gender logic: Men is just men, Women is just women, Unisex is just unisex
+    // Search logic: Filter by name, type, or category
+    const q = req.query.q as string;
+    if (q) {
+      query = query.or(`name.ilike.%${q}%,type.ilike.%${q}%,gender.ilike.%${q}%`);
+    }
+
+    // Unisex Logic: If gender is men or women, include unisex products
     if (gender) {
-      query = query.eq("gender", gender);
+      if (gender === 'men' || gender === 'women') {
+        query = query.in("gender", [gender, 'unisex']);
+      } else {
+        query = query.eq("gender", gender);
+      }
     }
 
     const { data, error } = await query;

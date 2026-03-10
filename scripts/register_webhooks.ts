@@ -34,14 +34,13 @@ async function registerWebhooks() {
             headers: { Authorization: `Bearer ${API_KEY}` }
         });
 
-        // 2. Clear old webhooks for this URL to avoid duplicates
+        // 2. Aggressively clear ALL existing webhooks for this shop
+        // Printify has a limit of 5, so we need to make room for AETHER's hooks
         for (const hook of existing.data) {
-            if (hook.url === WEBHOOK_URL) {
-                await axios.delete(`https://api.printify.com/v1/shops/${SHOP_ID}/webhooks/${hook.id}.json`, {
-                    headers: { Authorization: `Bearer ${API_KEY}` }
-                });
-                console.log(`Deleted old webhook: ${hook.id}`);
-            }
+            await axios.delete(`https://api.printify.com/v1/shops/${SHOP_ID}/webhooks/${hook.id}.json`, {
+                headers: { Authorization: `Bearer ${API_KEY}` }
+            });
+            console.log(`Deleted existing webhook: ${hook.id} (${hook.topic})`);
         }
 
         // 3. Register new webhooks

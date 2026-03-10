@@ -16,11 +16,16 @@ export default function Category() {
   const type = searchParams.get('type');
   const color = searchParams.get('color');
   const size = searchParams.get('size');
+  const q = searchParams.get('q');
 
   useEffect(() => {
     setLoading(true);
-    let url = `/api/products?gender=${gender}`;
-    if (type) url += `&type=${type}`;
+    // If gender is 'all' or no gender specified but q is present, fetch all
+    const genderPart = gender && gender !== 'all' ? `gender=${gender}` : '';
+    let url = `/api/products?${genderPart}`;
+
+    if (type) url += `${url.includes('?') ? '&' : '?'}type=${type}`;
+    if (q) url += `${url.includes('?') ? '&' : '?'}q=${q}`;
 
     fetch(url)
       .then(res => res.json())
@@ -31,7 +36,7 @@ export default function Category() {
         setProducts(filtered);
         setLoading(false);
       });
-  }, [gender, type, color, size]);
+  }, [gender, type, color, size, q]);
 
   const updateFilter = (key: string, value: string | null) => {
     const newParams = new URLSearchParams(searchParams);
