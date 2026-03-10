@@ -384,6 +384,9 @@ async function syncPrintifyProduct(p: any) {
 
   if (prodError) throw prodError;
 
+  // Delete existing variants for this product (ensures clean hex_code data on re-sync)
+  await supabase.from("product_variants").delete().eq("product_id", productData.id);
+
   // Phase 11: Parallel Processing (500x speed improvement for high-variant products)
   await Promise.all(p.variants.map(async (v: any) => {
     if (!v.is_enabled) return;
@@ -399,7 +402,7 @@ async function syncPrintifyProduct(p: any) {
 
     const { error: vError } = await supabase
       .from("product_variants")
-      .upsert({
+      .insert({
         product_id: productData.id,
         printify_variant_id: v.id.toString(),
         price: v.price / 100,
@@ -409,7 +412,7 @@ async function syncPrintifyProduct(p: any) {
         size: sizeName,
         hex_code: hexCode || "#888888",
         image_url: variantImage.src
-      }, { onConflict: 'printify_variant_id' });
+      });
 
     if (vError) {
       console.error(`[Sync] Error upserting variant ${v.id}:`, vError);
