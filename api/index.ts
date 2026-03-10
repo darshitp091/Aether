@@ -62,10 +62,10 @@ async function printifyFetch(endpoint: string, options: any = {}) {
 // Base sync function for categories
 async function ensureCategories() {
   const categories = [
-    { name: "Men", slug: "men" },
-    { name: "Women", slug: "women" },
-    { name: "Kids", slug: "kids" },
-    { name: "Unisex", slug: "unisex" }
+    { name: "Men", slug: "men", description: "Premium menswear engineered for the future." },
+    { name: "Women", slug: "women", description: "Digital-first apparel for the modern woman." },
+    { name: "Kids", slug: "kids", description: "Future wear for the next generation." },
+    { name: "Unisex", slug: "unisex", description: "Universal silhouettes for everyone." }
   ];
 
   for (const cat of categories) {
@@ -369,8 +369,8 @@ async function syncPrintifyProduct(p: any) {
       status: 'published',
       base_price: p.variants[0]?.price / 100 || 0,
       markup_price: (p.variants[0]?.price / 100) * 1.5 || 0,
+      tags: p.tags,
       metadata: {
-        tags: p.tags,
         all_images: p.images.map((img: any) => ({
           src: img.src,
           variant_ids: img.variant_ids,
@@ -465,9 +465,10 @@ app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
     console.log(`[Webhook] Received Printify event: ${type}`);
 
     // Log event to Supabase for audit
-    await supabase.from("webhook_logs").insert({
-      source: 'printify',
-      event_type: type,
+    await supabase.from("system_logs").insert({
+      source: 'printify_webhook',
+      level: 'info',
+      message: `Received event: ${type}`,
       payload: event
     });
 
@@ -480,6 +481,12 @@ app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
     res.status(200).json({ status: "ok" });
   } catch (error: any) {
     console.error("Webhook error:", error);
+    await supabase.from("system_logs").insert({
+      source: 'printify_webhook',
+      level: 'error',
+      message: `Webhook failed: ${error.message}`,
+      payload: { error: error.stack }
+    });
     res.status(500).json({ error: error.message });
   }
 });
@@ -552,10 +559,11 @@ app.get("/api/products", async (req, res) => {
     if (category) query = query.eq("categories.slug", category);
     if (type) query = query.eq("type", type);
 
-    // Search logic: Filter by name, type, or category
+    // Search logic: Filter by name, type, or tags
     const q = req.query.q as string;
     if (q) {
-      query = query.or(`name.ilike.%${q}%,type.ilike.%${q}%,gender.ilike.%${q}%`);
+      // Use the new tags array for filtering + ilike for name/gender
+      query = query.or(`name.ilike.%${q}%,gender.ilike.%${q}%,tags.cs.{"${q}"}`);
     }
 
     // Unisex Logic: If gender is men or women, include unisex products
@@ -604,7 +612,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.3",
+    version: "16.4",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {

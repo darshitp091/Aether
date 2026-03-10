@@ -50,9 +50,9 @@ async function syncAll() {
             console.log(`Processing chunk ${i / CHUNK_SIZE + 1} (${chunk.length} products)...`);
 
             await Promise.all(chunk.map(async (product) => {
-                console.log(`Syncing: ${product.title}...`);
                 try {
                     // Mimic a webhook payload
+                    console.log(`[Turbo] Syncing: ${product.title}...`);
                     await axios.post(SYNC_ENDPOINT, {
                         type: 'shop:product:updated',
                         data: { ...product, shop_id: SHOP_ID }
