@@ -245,13 +245,13 @@ async function syncPrintifyProduct(p: any) {
   // Phase 11: Deep Sync - Always fetch the latest data from the API
   // This captures mockups generated *after* the webhook was triggered
   try {
-    const { data: latestP } = await printifyFetch(`/shops/${shopId}/products/${p.id}.json`);
-    if (latestP) {
+    const latestP = await printifyFetch(`/shops/${shopId}/products/${p.id}.json`);
+    if (latestP && latestP.id) {
       p = { ...latestP, shop_id: shopId };
-      console.log(`[DeepSync] Successfully pulled latest data for ${p.id}`);
+      console.log(`[DeepSync] Successfully pulled latest data for ${p.id} (${latestP.images?.length || 0} images, ${latestP.options?.length || 0} options)`);
     }
-  } catch (e) {
-    console.warn(`[DeepSync] Could not fetch latest for ${p.id}, using payload data.`);
+  } catch (e: any) {
+    console.warn(`[DeepSync] Could not fetch latest for ${p.id}, using payload data. Error: ${e.message}`);
   }
 
   if (!p.images || p.images.length === 0) {
