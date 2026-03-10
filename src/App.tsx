@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
 import Category from './pages/Category';
@@ -87,6 +88,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Layout>
         <AnimatedRoutes />
       </Layout>
