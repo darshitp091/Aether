@@ -339,11 +339,12 @@ async function syncPrintifyProduct(p: any) {
       (p.tags.includes("Sweatshirt") ? "sweatshirt" : "other"));
 
   // Determine the sequence of options (Color/Size vs Size/Color)
-  const colorOptionIndex = p.options.findIndex((opt: any) => opt.type === 'color');
-  const sizeOptionIndex = p.options.findIndex((opt: any) => opt.type === 'size');
-  console.log(`[SyncDebug] Product: ${p.title} (ID: ${p.id})`);
-  console.log(`[SyncDebug] colorOptionIndex: ${colorOptionIndex}, sizeOptionIndex: ${sizeOptionIndex}`);
-  console.log(`[SyncDebug] Options: ${JSON.stringify(p.options.map((o: any) => ({ name: o.name, type: o.type })))}`);
+  // Printify's variant.title matches the order of the p.options array
+  const options = p.options || [];
+  const colorOptionIndex = options.findIndex((opt: any) => opt.type === 'color');
+  const sizeOptionIndex = options.findIndex((opt: any) => opt.type === 'size');
+
+  console.log(`[Sync] Mapping detected for ${p.title}: ColorIdx=${colorOptionIndex}, SizeIdx=${sizeOptionIndex}`);
 
   // Extract native colors from p.options — map by TITLE (color name) for reliable matching
   const colorOption = p.options[colorOptionIndex];
@@ -400,8 +401,30 @@ async function syncPrintifyProduct(p: any) {
 
     // Dynamic Title Splitting based on detected option order
     const parts = v.title.split(" / ");
-    const colorName = colorOptionIndex !== -1 ? (parts[colorOptionIndex] || "Default") : "Default";
-    const sizeName = sizeOptionIndex !== -1 ? (parts[sizeOptionIndex] || "One Size") : "One Size";
+    let colorName = "Default";
+    let sizeName = "One Size";
+
+    if (colorOptionIndex !== -1 && sizeOptionIndex !== -1) {
+      // We have both indices, use them directly
+      colorName = parts[colorOptionIndex] || "Default";
+      sizeName = parts[sizeOptionIndex] || "One Size";
+    } else if (parts.length === 2) {
+      // Heuristic: If we don't have indices but have 2 parts, check which is likely a size
+      const SIZE_KEYWORDS = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'One Size'];
+      const isPart0Size = SIZE_KEYWORDS.some(kw => parts[0].toUpperCase() === kw);
+      const isPart1Size = SIZE_KEYWORDS.some(kw => parts[1].toUpperCase() === kw);
+
+      if (isPart0Size && !isPart1Size) {
+        sizeName = parts[0];
+        colorName = parts[1];
+      } else {
+        colorName = parts[0];
+        sizeName = parts[1];
+      }
+    } else {
+      colorName = parts[0] || "Default";
+      sizeName = parts[1] || "One Size";
+    }
 
     if (p.id === '69b007cd6d2baa18fc0b562a') {
       console.log(`[SyncDebug] Variant ${v.id} Title: "${v.title}" -> color: "${colorName}", size: "${sizeName}"`);
@@ -640,7 +663,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.7",
+    version: "16.8",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
