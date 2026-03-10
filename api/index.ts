@@ -341,6 +341,9 @@ async function syncPrintifyProduct(p: any) {
   // Determine the sequence of options (Color/Size vs Size/Color)
   const colorOptionIndex = p.options.findIndex((opt: any) => opt.type === 'color');
   const sizeOptionIndex = p.options.findIndex((opt: any) => opt.type === 'size');
+  console.log(`[SyncDebug] Product: ${p.title} (ID: ${p.id})`);
+  console.log(`[SyncDebug] colorOptionIndex: ${colorOptionIndex}, sizeOptionIndex: ${sizeOptionIndex}`);
+  console.log(`[SyncDebug] Options: ${JSON.stringify(p.options.map((o: any) => ({ name: o.name, type: o.type })))}`);
 
   // Extract native colors from p.options — map by TITLE (color name) for reliable matching
   const colorOption = p.options[colorOptionIndex];
@@ -399,6 +402,10 @@ async function syncPrintifyProduct(p: any) {
     const parts = v.title.split(" / ");
     const colorName = colorOptionIndex !== -1 ? (parts[colorOptionIndex] || "Default") : "Default";
     const sizeName = sizeOptionIndex !== -1 ? (parts[sizeOptionIndex] || "One Size") : "One Size";
+
+    if (p.id === '69b007cd6d2baa18fc0b562a') {
+      console.log(`[SyncDebug] Variant ${v.id} Title: "${v.title}" -> color: "${colorName}", size: "${sizeName}"`);
+    }
 
     // Color resolution: Native Printify hex > Auto-Color Engine > Fallback grey
     const hexCode = nativeColorByName[colorName] || getHexForColor(colorName);
@@ -624,7 +631,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.5",
+    version: "16.6",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
