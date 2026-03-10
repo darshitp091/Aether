@@ -19,8 +19,8 @@ export const app = express();
 // Must be ABOVE express.json() to handle empty/malformed validation pings
 app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res, next) => {
   if (req.method === 'GET' || (req.method === 'POST' && (!req.headers['content-length'] || req.headers['content-length'] === '0'))) {
-    console.log(`[Webhook] Pre-middleware Handshake triggered (${req.method})`);
-    return res.status(200).json({ status: "ok", mode: "handshake" });
+    console.log(`[Webhook] Minimal Handshake triggered (${req.method})`);
+    return res.status(200).end(); // No body, just 200 OK
   }
   next();
 });
@@ -678,7 +678,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "17.1",
+    version: "17.2",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
