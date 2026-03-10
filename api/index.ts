@@ -438,7 +438,7 @@ async function syncPrintifyProduct(p: any) {
   return productData;
 }
 
-app.post("/api/webhooks/printify", async (req, res) => {
+app.post(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
   // Force no-cache to prevent Vercel 304 responses for webhook validation
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -453,7 +453,7 @@ app.post("/api/webhooks/printify", async (req, res) => {
     // Validation check: Printify sometimes sends a ping with empty body or different structure
     if (!event || !event.type) {
       console.log("[Webhook] Received possible validation ping (empty/invalid body)");
-      return res.status(200).send("OK");
+      return res.status(200).json({ status: "ok", validation: true });
     }
 
     const { type, resource, data } = event;
@@ -472,7 +472,7 @@ app.post("/api/webhooks/printify", async (req, res) => {
       await supabase.from("products").delete().eq("printify_id", data.id);
     }
 
-    res.status(200).send("OK");
+    res.status(200).json({ status: "ok" });
   } catch (error: any) {
     console.error("Webhook error:", error);
     res.status(500).json({ error: error.message });
