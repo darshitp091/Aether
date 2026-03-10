@@ -497,8 +497,11 @@ app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
 
-  if (req.method === 'GET') {
-    return res.status(200).json({ status: "ok", mode: "validation" });
+  // 1. FAST HANDSHAKE (Satisfies Printify 9004 validation error)
+  // If it's a GET, or a POST with no data, return 200 OK immediately.
+  if (req.method === 'GET' || (req.method === 'POST' && (!req.body || Object.keys(req.body).length === 0))) {
+    console.log(`[Webhook] Fast Handshake triggered (${req.method})`);
+    return res.status(200).json({ status: "ok", mode: "handshake" });
   }
 
   try {
@@ -664,7 +667,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.9",
+    version: "17.0",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
