@@ -39,7 +39,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="hidden lg:flex items-center gap-10 font-display text-xl uppercase tracking-tighter">
-          {['Men', 'Women', 'Kids', 'Drops'].map((item) => (
+          {['Men', 'Women', 'Kids', 'Unisex', 'Drops'].map((item) => (
             <Link
               key={item}
               to={item === 'Drops' ? '/collections' : `/category/${item.toLowerCase()}`}
@@ -109,7 +109,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="flex flex-col gap-4">
-                {['Men', 'Women', 'Kids', 'Drops', 'Manifesto'].map((item, i) => (
+                {['Men', 'Women', 'Kids', 'Unisex', 'Drops', 'Manifesto'].map((item, i) => (
                   <Link
                     key={item}
                     to={item === 'Drops' ? '/collections' : item === 'Manifesto' ? '/about' : `/category/${item.toLowerCase()}`}
@@ -198,6 +198,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <li><Link to="/category/men" className="hover:text-accent transition-all hover:translate-x-4 inline-block">MEN</Link></li>
                   <li><Link to="/category/women" className="hover:text-accent transition-all hover:translate-x-4 inline-block">WOMEN</Link></li>
                   <li><Link to="/category/kids" className="hover:text-accent transition-all hover:translate-x-4 inline-block">KIDS</Link></li>
+                  <li><Link to="/category/unisex" className="hover:text-accent transition-all hover:translate-x-4 inline-block">UNISEX</Link></li>
                   <li><Link to="/collections" className="hover:text-accent transition-all hover:translate-x-4 inline-block">DROPS</Link></li>
                 </ul>
               </div>
