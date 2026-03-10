@@ -338,8 +338,12 @@ async function syncPrintifyProduct(p: any) {
     (p.tags.includes("Hoodie") ? "hoodie" :
       (p.tags.includes("Sweatshirt") ? "sweatshirt" : "other"));
 
+  // Determine the sequence of options (Color/Size vs Size/Color)
+  const colorOptionIndex = p.options.findIndex((opt: any) => opt.type === 'color');
+  const sizeOptionIndex = p.options.findIndex((opt: any) => opt.type === 'size');
+
   // Extract native colors from p.options — map by TITLE (color name) for reliable matching
-  const colorOption = p.options?.find((opt: any) => opt.type === 'color');
+  const colorOption = p.options[colorOptionIndex];
   const nativeColorByName: Record<string, string> = {};
   if (colorOption?.values) {
     colorOption.values.forEach((v: any) => {
@@ -391,8 +395,10 @@ async function syncPrintifyProduct(p: any) {
   await Promise.all(p.variants.map(async (v: any) => {
     if (!v.is_enabled) return;
 
-    const colorName = v.title.split(" / ")[0] || "Default";
-    const sizeName = v.title.split(" / ")[1] || "One Size";
+    // Dynamic Title Splitting based on detected option order
+    const parts = v.title.split(" / ");
+    const colorName = colorOptionIndex !== -1 ? (parts[colorOptionIndex] || "Default") : "Default";
+    const sizeName = sizeOptionIndex !== -1 ? (parts[sizeOptionIndex] || "One Size") : "One Size";
 
     // Color resolution: Native Printify hex > Auto-Color Engine > Fallback grey
     const hexCode = nativeColorByName[colorName] || getHexForColor(colorName);
@@ -431,6 +437,12 @@ async function syncPrintifyProduct(p: any) {
       })
     });
     console.log(`[Sync] Signaled publishing success for product ${p.id}`);
+    await supabase.from("system_logs").insert({
+      source: 'manual_sync_engine',
+      level: 'info',
+      message: `Product ${p.id} (${p.title}) synced successfully.`,
+      payload: { printify_id: p.id, slug }
+    });
   } catch (e) {
     console.warn(`[Sync] Failed to signal success for ${p.id}:`, e);
   }
@@ -625,3 +637,10 @@ app.get("/api/health", (_req, res) => {
 
 // Export the app for Vercel
 export default app;
+
+// Local development server support
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`[Local Server] AETHER Engine running on http://localhost:${PORT}`);
+  });
+}
