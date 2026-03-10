@@ -63,8 +63,12 @@ Our custom **Deep Sync Architecture** fetches real-time mockup generation data d
 AETHER is production-ready for **Vercel**. 
 1. Push to GitHub.
 2. Import to Vercel.
-3. Add Env Vars.
-4. Run `npx tsx scripts/register_webhooks.ts` to link your live shop.
+3. Add Env Vars (including `APP_URL=https://store-aether.vercel.app`).
+4. **Link Your Shop**: Run these commands from your terminal to link and populate your live site:
+   ```bash
+   npx tsx scripts/register_webhooks.ts
+   npx tsx scripts/sync_all.ts
+   ```
 
 ---
 
