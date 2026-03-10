@@ -506,10 +506,11 @@ app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
     console.log("[Webhook] Raw Body:", JSON.stringify(req.body));
     console.log("[Webhook] Headers:", JSON.stringify(req.headers));
 
-    // Validation check: Printify sometimes sends a ping with empty body or different structure
-    if (!event || !event.type) {
-      console.log("[Webhook] Received possible validation ping (empty/invalid body)");
-      return res.status(200).json({ status: "ok", validation: true });
+    // Validation check: Printify sends a POST with empty body or metadata during registration
+    // We must return 200 OK immediately to satisfy their handshake
+    if (!event || Object.keys(event).length === 0 || !event.type) {
+      console.log("[Webhook] Permissive 200 OK for validation handshake");
+      return res.status(200).json({ status: "ok", handshake: true });
     }
 
     const { type, resource, data } = event;
@@ -663,7 +664,7 @@ app.get("/api/categories", async (req, res) => {
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "16.8",
+    version: "16.9",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {
