@@ -227,17 +227,83 @@ app.get("/api/printify/products/:shopId", async (req, res) => {
   }
 });
 
-// We keep this as fallback, but will prioritize native colors from Printify API
+// Massive Color Map for Streetwear / Printify / Shopify Standard Colors
 const COLOR_MAP: Record<string, string> = {
-  "Black": "#000000", "White": "#ffffff", "Navy": "#000080", "Grey": "#808080",
-  "Gray": "#808080", "Red": "#ff0000", "Blue": "#0000ff", "Green": "#00ff00",
-  "Yellow": "#ffff00", "Orange": "#ffa500", "Purple": "#800080", "Pink": "#ffc0cb",
-  "Beige": "#f5f5dc", "Charcoal": "#36454f", "Royal": "#4169e1", "Light Blue": "#add8e6",
-  "Forest": "#228b22", "Maroon": "#800000", "Gold": "#ffd700", "Silver": "#c0c0c0",
-  "Olive": "#808000", "Tan": "#d2b48c", "Brown": "#a52a2a", "Teal": "#008080",
-  "Burgundy": "#800020", "Ash": "#d1d1d1", "Sand": "#c2b280", "Kelly": "#4cbb17",
-  "Natural": "#f5f5dc", "Cream": "#fffdd0", "Heather": "#9aa1aa", "Sport Grey": "#9c9c9c"
+  // Primaries & Basics
+  "Black": "#000000", "True Black": "#000000", "Coal": "#1a1a1a", "Onyx": "#0f0f0f",
+  "White": "#ffffff", "True White": "#ffffff", "Off White": "#f5f5f5", "Snow": "#fffafa",
+  "Navy": "#000080", "French Navy": "#000040", "Midnight": "#191970", "Deep Navy": "#000033",
+  "Grey": "#808080", "Gray": "#808080", "Light Grey": "#d3d3d3", "Dark Grey": "#a9a9a9",
+  "Charcoal": "#36454f", "Anthracite": "#2e2e2e", "Iron": "#434b4d", "Slate": "#708090",
+  "Ash": "#d1d1d1", "Silver": "#c0c0c0", "Oxford": "#e1e1e1", "Sport Grey": "#9c9c9c",
+
+  // Reds & Pinks
+  "Red": "#ff0000", "Crimson": "#dc143c", "Maroon": "#800000", "Burgundy": "#800020",
+  "Wine": "#722f37", "Oxblood": "#4a0404", "Cardinal": "#c41e3a", "Rust": "#b7410e",
+  "Pink": "#ffc0cb", "Light Pink": "#ffb6c1", "Hot Pink": "#ff69b4", "Rose": "#ff007f",
+  "Dusty Rose": "#cca9ac", "Mauve": "#e0b0ff", "Fuschia": "#ff00ff", "Berry": "#990f3d",
+
+  // Blues
+  "Blue": "#0000ff", "Royal": "#4169e1", "Royal Blue": "#002366", "Electric Blue": "#7df9ff",
+  "Light Blue": "#add8e6", "Sky Blue": "#87ceeb", "Baby Blue": "#89cff0", "Cyan": "#00ffff",
+  "Teal": "#008080", "Turquoise": "#40e0d0", "Aqua": "#00ffff", "Ocean": "#0077be",
+  "Ice Blue": "#99ffff", "Cornflower": "#6495ed", "Carolina Blue": "#4b9cd3",
+
+  // Greens
+  "Green": "#00ff00", "Forest": "#228b22", "Forest Green": "#228b22", "Dark Green": "#006400",
+  "Military Green": "#4b5320", "Olive": "#808000", "Army": "#4b5320", "Army Green": "#4b5320",
+  "Kelly": "#4cbb17", "Kelly Green": "#4cbb17", "Mint": "#98ff98", "Sage": "#bcb88a",
+  "Lime": "#00ff00", "Emerald": "#50c878", "Hunter Green": "#355e3b", "Moss": "#8a9a5b",
+  "Heather Forest": "#228b22", "Irish Green": "#009a44",
+
+  // Earth & Browns
+  "Beige": "#f5f5dc", "Tan": "#d2b48c", "Khaki": "#c3b091", "Sand": "#c2b280",
+  "Desert": "#edc9af", "Camel": "#c19a6b", "Brown": "#a52a2a", "Dark Brown": "#654321",
+  "Chocolate": "#7b3f00", "Coffee": "#6f4e37", "Copper": "#b87333", "Bronze": "#cd7f32",
+  "Coyote": "#81613e", "Natural": "#f5f5dc", "Ivory": "#fffff0", "Cream": "#fffdd0",
+
+  // Yellows & Oranges
+  "Yellow": "#ffff00", "Gold": "#ffd700", "Lemon": "#fff700", "Sunflower": "#ffda00",
+  "Mustard": "#ffdb58", "Orange": "#ffa500", "Sunset": "#fad6a5", "Peach": "#ffcc99",
+  "Amber": "#ffbf00", "Neon Orange": "#ff5f00", "Safety Orange": "#ff6700",
+
+  // Purples
+  "Purple": "#800080", "Violet": "#ee82ee", "Grape": "#6f2da8", "Plum": "#8e4585",
+  "Lavender": "#e6e6fa", "Lilac": "#c8a2c8", "Eggplant": "#614051", "Indigo": "#4b0082",
+
+  // Heathers & Textures
+  "Heather": "#9aa1aa", "Heather Grey": "#9c9c9c", "Athletic Heather": "#b2b2b2",
+  "Dark Heather": "#555555", "Graphite": "#383838", "Stone": "#8b8c7e",
+  "Marble": "#e2e2e2", "Acid Wash": "#404040", "Vintage Black": "#1c1c1c"
 };
+
+function getHexForColor(colorName: string): string {
+  const normalized = colorName.trim();
+  // 1. Direct match
+  if (COLOR_MAP[normalized]) return COLOR_MAP[normalized];
+
+  // 2. Case-insensitive match
+  const lower = normalized.toLowerCase();
+  for (const [key, value] of Object.entries(COLOR_MAP)) {
+    if (key.toLowerCase() === lower) return value;
+  }
+
+  // 3. Smart Matcher: Extract base color from complex names (e.g., "Deep Royal Blue")
+  const parts = lower.split(' ');
+  for (const part of [...parts].reverse()) { // Check last word first (usually the primary color)
+    for (const [key, value] of Object.entries(COLOR_MAP)) {
+      if (key.toLowerCase() === part) return value;
+    }
+  }
+
+  // 4. Heuristic: Look for keywords anywhere in the string
+  const keywords = Object.keys(COLOR_MAP).sort((a, b) => b.length - a.length); // Longest first
+  for (const kw of keywords) {
+    if (lower.includes(kw.toLowerCase())) return COLOR_MAP[kw];
+  }
+
+  return "#888888"; // Final fallback
+}
 
 async function syncPrintifyProduct(p: any) {
   const shopId = p.shop_id || '19291817';
@@ -331,10 +397,7 @@ async function syncPrintifyProduct(p: any) {
     if (colorOptionId !== undefined) {
       hexCode = nativeColorMap[colorOptionId];
     } else {
-      // Advanced name-based matching
-      const normalizedColorName = colorName.toLowerCase();
-      const fallbackMatch = Object.keys(COLOR_MAP).find(k => normalizedColorName.includes(k.toLowerCase()));
-      hexCode = fallbackMatch ? COLOR_MAP[fallbackMatch] : (COLOR_MAP[colorName] || "#888888");
+      hexCode = getHexForColor(colorName);
     }
 
     // Find image for this variant
@@ -366,7 +429,7 @@ async function syncPrintifyProduct(p: any) {
       body: JSON.stringify({
         external: {
           id: productData.id,
-          handle: `${process.env.APP_URL || 'http://localhost:3000'}/product/${slug}`
+          handle: `https://store-aether.vercel.app/product/${slug}`
         }
       })
     });

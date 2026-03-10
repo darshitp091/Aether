@@ -72,30 +72,33 @@ export default function ProductDetail() {
   // Auto-switch image when color changes
   const handleColorChange = (color: string) => {
     setSelectedColor(color);
-    // Find the first image that belongs to this color's variants
+
+    // 1. Find the specific mockup for this color
     const colorVariants = variants.filter(v => v.color === color);
     const colorVariantIds = colorVariants.map(v => v.printify_variant_id);
 
-    // Check metadata.all_images for a match
+    // 2. Check metadata images for the first one that matches any of these variant IDs
     const allImages = (product as any).metadata?.all_images || [];
     const matchIndex = allImages.findIndex((img: any) =>
       img.variant_ids && img.variant_ids.some((vid: any) => colorVariantIds.includes(vid.toString()))
     );
 
     if (matchIndex !== -1) {
-      // Find where this image is in the 'gallery' array
-      const galleryIndex = gallery.indexOf(allImages[matchIndex].src);
+      // Find where this image is in our gallery list
+      const targetSrc = allImages[matchIndex].src;
+      const galleryIndex = gallery.findIndex(src => src === targetSrc);
       if (galleryIndex !== -1) {
         setActiveImageIndex(galleryIndex);
+        return;
       }
-    } else {
-      // Fallback: look for the variant's own image_url in the gallery
-      const variantImage = colorVariants[0]?.image_url;
-      if (variantImage) {
-        const galleryIndex = gallery.indexOf(variantImage);
-        if (galleryIndex !== -1) {
-          setActiveImageIndex(galleryIndex);
-        }
+    }
+
+    // 3. Fallback: Search for the variant's own image_url directly in the gallery
+    const variantImage = colorVariants[0]?.image_url;
+    if (variantImage) {
+      const galleryIndex = gallery.findIndex(src => src === variantImage);
+      if (galleryIndex !== -1) {
+        setActiveImageIndex(galleryIndex);
       }
     }
   };
