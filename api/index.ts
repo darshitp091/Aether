@@ -438,12 +438,17 @@ async function syncPrintifyProduct(p: any) {
   return productData;
 }
 
-app.post(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
+app.all(["/api/webhooks/printify", "/webhooks/printify"], async (req, res) => {
+  console.log(`[Webhook Hit] ${req.method} ${req.path}`);
   // Force no-cache to prevent Vercel 304 responses for webhook validation
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
+
+  if (req.method === 'GET') {
+    return res.status(200).json({ status: "ok", mode: "validation" });
+  }
 
   try {
     const event = req.body;
