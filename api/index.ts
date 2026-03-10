@@ -338,15 +338,16 @@ async function syncPrintifyProduct(p: any) {
     (p.tags.includes("Hoodie") ? "hoodie" :
       (p.tags.includes("Sweatshirt") ? "sweatshirt" : "other"));
 
-  // Extract native colors from p.options
+  // Extract native colors from p.options — map by TITLE (color name) for reliable matching
   const colorOption = p.options?.find((opt: any) => opt.type === 'color');
-  const nativeColorMap: Record<number, string> = {};
+  const nativeColorByName: Record<string, string> = {};
   if (colorOption?.values) {
     colorOption.values.forEach((v: any) => {
-      if (v.colors?.[0]) {
-        nativeColorMap[v.id] = v.colors[0];
+      if (v.colors?.[0] && v.title) {
+        nativeColorByName[v.title.trim()] = v.colors[0];
       }
     });
+    console.log(`[ColorEngine] Found ${Object.keys(nativeColorByName).length} native colors from Printify options`);
   }
 
   const { data: catData } = await supabase.from("categories").select("id").eq("slug", gender).single();
@@ -390,15 +391,8 @@ async function syncPrintifyProduct(p: any) {
     const colorName = v.title.split(" / ")[0] || "Default";
     const sizeName = v.title.split(" / ")[1] || "One Size";
 
-    // Try to find hex from native options first, then fallback to COLOR_MAP
-    let hexCode = "#888888";
-    const colorOptionId = v.options?.find((oid: number) => nativeColorMap[oid] !== undefined);
-
-    if (colorOptionId !== undefined) {
-      hexCode = nativeColorMap[colorOptionId];
-    } else {
-      hexCode = getHexForColor(colorName);
-    }
+    // Color resolution: Native Printify hex > Auto-Color Engine > Fallback grey
+    const hexCode = nativeColorByName[colorName] || getHexForColor(colorName);
 
     // Find image for this variant
     const variantImage = p.images.find((img: any) => img.variant_ids && img.variant_ids.includes(v.id)) || defaultImage;
