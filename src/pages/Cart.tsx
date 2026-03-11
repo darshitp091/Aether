@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Trash2, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
+import { Trash2, ArrowRight, ShoppingBag, Loader2, Plus, Minus } from 'lucide-react';
 import { useStore } from '../store';
 import { formatPrice } from '../utils';
 import { loadScript } from '../utils/scriptLoader';
 import { supabase } from '../lib/supabase';
 
 export default function Cart() {
-  const { cart, removeFromCart, clearCart } = useStore();
+  const { cart, removeFromCart, updateQuantity, clearCart } = useStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
@@ -185,9 +185,23 @@ export default function Cart() {
                   </div>
                 </div>
                 <div className="flex justify-between items-end mt-16">
-                  <div className="flex items-center gap-8 font-mono text-lg">
-                    <span className="text-white/40 uppercase tracking-[0.5em]">QTY:</span>
-                    <span className="text-4xl text-accent font-bold bg-white text-black px-4 py-1 border-4 border-black">{item.quantity}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-sm text-white/40 uppercase tracking-[0.3em]">QTY:</span>
+                    <div className="flex items-center border-4 border-white">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, item.quantity - 1)}
+                        className="w-12 h-12 flex items-center justify-center hover:bg-accent hover:text-black transition-all"
+                      >
+                        <Minus size={18} />
+                      </button>
+                      <span className="w-14 h-12 flex items-center justify-center font-display text-xl bg-white text-black border-x-4 border-black">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.selectedColor, item.selectedSize, item.quantity + 1)}
+                        className="w-12 h-12 flex items-center justify-center hover:bg-accent hover:text-black transition-all"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
                   </div>
                   <span className="text-5xl font-display text-accent">{formatPrice(item.markup_price * item.quantity)}</span>
                 </div>

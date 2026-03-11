@@ -189,12 +189,14 @@ app.post("/api/orders/create", async (req, res) => {
     console.error("Order completion error:", error);
 
     // Log failure
-    await supabase.from("system_logs").insert({
-      source: 'order_pipeline',
-      level: 'error',
-      message: `Order creation failed: ${error.message}`,
-      payload: { error: error.stack }
-    }).catch(() => {});
+    try {
+      await supabase.from("system_logs").insert({
+        source: 'order_pipeline',
+        level: 'error',
+        message: `Order creation failed: ${error.message}`,
+        payload: { error: error.stack }
+      });
+    } catch (_) { /* ignore logging failure */ }
 
     res.status(500).json({ error: error.message });
   }
@@ -780,11 +782,59 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
+// Reviews API
+app.get("/api/reviews/:slug", async (req, res) => {
+  try {
+    // Find product by slug first
+    const { data: product, error: pError } = await supabase
+      .from("products")
+      .select("id")
+      .eq("slug", req.params.slug)
+      .single();
+
+    if (pError || !product) {
+      return res.json([]);
+    }
+
+    const { data, error } = await supabase
+      .from("product_reviews")
+      .select("*")
+      .eq("product_id", product.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    res.json([]);  // Graceful fallback — reviews are non-critical
+  }
+});
+
+app.post("/api/reviews", async (req, res) => {
+  try {
+    const { product_id, user_id, rating, title, body } = req.body;
+    if (!product_id || !rating) {
+      return res.status(400).json({ error: "Product ID and rating are required." });
+    }
+
+    const { data, error } = await supabase
+      .from("product_reviews")
+      .insert({ product_id, user_id: user_id || null, rating, title, body })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "18.0",
+    version: "20.0",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {

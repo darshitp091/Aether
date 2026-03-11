@@ -18,6 +18,7 @@ import Privacy from './pages/Privacy';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderTracking from './pages/OrderTracking';
 import OrderHistory from './pages/OrderHistory';
+import SizeGuide from './pages/SizeGuide';
 import { supabase } from './lib/supabase';
 
 function AnimatedRoutes() {
@@ -99,6 +100,11 @@ function AnimatedRoutes() {
         <Route path="/orders" element={
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
             <OrderHistory />
+          </motion.div>
+        } />
+        <Route path="/size-guide" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <SizeGuide />
           </motion.div>
         } />
         <Route path="*" element={<Home />} />

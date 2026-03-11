@@ -20,6 +20,8 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('');
   const [activeTab, setActiveTab] = useState<'details' | 'shipping' | 'reviews'>('details');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [reviews, setReviews] = useState<any[]>([]);
 
   const addToCart = useStore((state) => state.addToCart);
   const toggleWishlist = useStore((state) => state.toggleWishlist);
@@ -37,6 +39,12 @@ export default function ProductDetail() {
         if (uniqueColors.length > 0) setSelectedColor(uniqueColors[0]);
         if (uniqueSizes.length > 0) setSelectedSize(uniqueSizes[0]);
       });
+
+    // Fetch reviews
+    fetch(`/api/reviews/${slug}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setReviews(data))
+      .catch(() => {});
   }, [slug]);
 
   if (!product) return (
@@ -229,9 +237,9 @@ export default function ProductDetail() {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">SIZE_MATRIX</h3>
-                  <button className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-accent hover:underline">
+                  <Link to="/size-guide" className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-accent hover:underline">
                     <Ruler size={12} /> SIZE_GUIDE
-                  </button>
+                  </Link>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {sizes.map(s => (
@@ -249,10 +257,26 @@ export default function ProductDetail() {
                 </div>
               </div>
 
+              {/* Quantity */}
+              <div className="pt-6">
+                <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/40 mb-4">QUANTITY</h3>
+                <div className="flex items-center gap-0 border-2 border-white/20 w-fit">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-14 h-14 flex items-center justify-center font-display text-2xl hover:bg-white/10 transition-colors"
+                  >−</button>
+                  <span className="w-16 h-14 flex items-center justify-center font-display text-xl border-x-2 border-white/20">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-14 h-14 flex items-center justify-center font-display text-2xl hover:bg-white/10 transition-colors"
+                  >+</button>
+                </div>
+              </div>
+
               {/* Cart Action */}
               <div className="pt-6">
                 <button
-                  onClick={() => addToCart(product, selectedColor, selectedSize)}
+                  onClick={() => { addToCart(product, selectedColor, selectedSize, quantity); setQuantity(1); }}
                   className="w-full h-24 bg-white text-black font-display text-2xl uppercase tracking-[0.2em] flex items-center justify-center gap-6 hover:bg-accent transition-all active:scale-95 group shadow-[8px_8px_0px_0px_rgba(0,255,102,1)]"
                 >
                   <ShoppingBag className="group-hover:translate-y-[-2px] transition-transform" />
@@ -286,6 +310,32 @@ export default function ProductDetail() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Reviews Section */}
+              <div className="pt-16 border-t-2 border-white/5">
+                <div className="flex items-center justify-between mb-8">
+                  <h4 className="font-display text-xl uppercase tracking-widest text-white">Reviews</h4>
+                  <span className="font-mono text-sm text-accent">[ {reviews.length} ]</span>
+                </div>
+                {reviews.length === 0 ? (
+                  <p className="font-mono text-sm text-white/30 uppercase tracking-wider">No reviews yet. Be the first to share your experience.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {reviews.map((r: any, i: number) => (
+                      <div key={i} className="border-2 border-white/10 p-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          {Array.from({ length: 5 }).map((_, j) => (
+                            <Star key={j} size={14} className={j < r.rating ? 'text-accent fill-accent' : 'text-white/10'} />
+                          ))}
+                          <span className="font-mono text-xs text-white/40 ml-2">{new Date(r.created_at).toLocaleDateString()}</span>
+                        </div>
+                        {r.title && <p className="font-display text-lg uppercase mb-2">{r.title}</p>}
+                        {r.body && <p className="font-mono text-sm text-white/50 uppercase tracking-wider">{r.body}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
