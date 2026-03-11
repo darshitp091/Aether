@@ -173,15 +173,101 @@ app.post("/api/orders/create", async (req, res) => {
     // 5. Update Order with Printify ID
     await supabase
       .from("orders")
-      .update({ printify_order_id: printifyOrder.id })
+      .update({ printify_order_id: printifyOrder.id, status: 'processing' })
       .eq("id", order.id);
+
+    // 6. Log success
+    await supabase.from("system_logs").insert({
+      source: 'order_pipeline',
+      level: 'info',
+      message: `Order ${order.id} created, Printify order ${printifyOrder.id} submitted.`,
+      payload: { order_id: order.id, printify_order_id: printifyOrder.id, total: total_amount }
+    });
 
     res.json({ success: true, order_id: order.id, printify_order_id: printifyOrder.id });
   } catch (error: any) {
     console.error("Order completion error:", error);
+
+    // Log failure
+    await supabase.from("system_logs").insert({
+      source: 'order_pipeline',
+      level: 'error',
+      message: `Order creation failed: ${error.message}`,
+      payload: { error: error.stack }
+    }).catch(() => {});
+
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get single order by ID
+app.get("/api/orders/:id", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*, order_items(*, products(name, slug, image_url), product_variants(color, size, image_url))")
+      .eq("id", req.params.id)
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(error.code === 'PGRST116' ? 404 : 500).json({ error: error.message });
+  }
+});
+
+// Track order by ID + email (public, no auth needed)
+app.post("/api/orders/track", async (req, res) => {
+  try {
+    const { order_id, email } = req.body;
+    if (!order_id || !email) {
+      return res.status(400).json({ error: "Order ID and email are required." });
+    }
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, total_amount, shipping_cost, shipping_address, tracking_number, tracking_url, printify_order_id, created_at, order_items(*, products(name, slug, image_url))")
+      .eq("id", order_id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    // Verify email matches
+    const orderEmail = (data.shipping_address as any)?.email;
+    if (orderEmail && orderEmail.toLowerCase() !== email.toLowerCase()) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get order history for current user (by email)
+app.get("/api/orders/history/:email", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("id, status, total_amount, shipping_cost, created_at, order_items(quantity, unit_price, products(name, slug, image_url))")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    // Filter by email in shipping_address JSON
+    const filtered = (data || []).filter((o: any) => {
+      const email = (o.shipping_address as any)?.email;
+      return email && email.toLowerCase() === req.params.email.toLowerCase();
+    });
+
+    res.json(filtered);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/payment/razorpay/order", async (req, res) => {
   try {
     const { amount, currency = "INR", receipt } = req.body;

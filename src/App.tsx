@@ -15,6 +15,9 @@ import Contact from './pages/Contact';
 import Returns from './pages/Returns';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import OrderSuccess from './pages/OrderSuccess';
+import OrderTracking from './pages/OrderTracking';
+import OrderHistory from './pages/OrderHistory';
 import { supabase } from './lib/supabase';
 
 function AnimatedRoutes() {
@@ -81,6 +84,21 @@ function AnimatedRoutes() {
         <Route path="/privacy" element={
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
             <Privacy />
+          </motion.div>
+        } />
+        <Route path="/order-success" element={
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
+            <OrderSuccess />
+          </motion.div>
+        } />
+        <Route path="/track-order" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <OrderTracking />
+          </motion.div>
+        } />
+        <Route path="/orders" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <OrderHistory />
           </motion.div>
         } />
         <Route path="*" element={<Home />} />

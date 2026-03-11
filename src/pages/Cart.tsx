@@ -79,8 +79,7 @@ export default function Cart() {
             const completionData = await completionRes.json();
             if (completionData.success) {
               clearCart();
-              alert('Order Placed Successfully! Your Aether drop is on the way.');
-              navigate('/');
+              navigate(`/order-success?id=${completionData.order_id}`);
             } else {
               throw new Error(completionData.error || 'Order completion failed');
             }
