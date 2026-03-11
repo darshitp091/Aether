@@ -282,7 +282,7 @@ export default function ProductDetail() {
                       <ChevronRight size={16} className="text-white/20" />
                     </div>
                     <p className="text-sm text-white/40 font-mono uppercase leading-relaxed hidden group-hover:block">
-                      Free Global Shipping // Shipped from AETHER Hub // 5-10 Business Days
+                      Flat Rate: $4.99 US / $9.99 INTL // FREE on $100+ // 5-15 Business Days
                     </p>
                   </div>
                 </div>

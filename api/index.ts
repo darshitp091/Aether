@@ -674,11 +674,31 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
+// Contact Form
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Name, email, and message are required." });
+    }
+
+    const { error } = await supabase.from("contact_messages").insert({
+      name, email, subject: subject || 'General Inquiry', message
+    });
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[Contact] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "17.2",
+    version: "18.0",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {

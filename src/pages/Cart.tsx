@@ -25,7 +25,8 @@ export default function Cart() {
   });
 
   const subtotal = cart.reduce((acc, item) => acc + (item.markup_price * item.quantity), 0);
-  const shipping = subtotal > 250 ? 0 : 25;
+  const shippingRate = address.country_code === 'US' ? 4.99 : 9.99;
+  const shipping = subtotal >= 100 ? 0 : shippingRate;
   const total = subtotal + shipping;
 
   const handleCheckout = async () => {
@@ -258,6 +259,22 @@ export default function Cart() {
                   onChange={(e) => setAddress({ ...address, postal_code: e.target.value })}
                 />
               </div>
+              <select
+                className="w-full bg-black border-2 border-white/20 p-4 font-mono text-sm focus:border-accent outline-none transition-colors uppercase"
+                value={address.country_code}
+                onChange={(e) => setAddress({ ...address, country_code: e.target.value })}
+              >
+                <option value="IN">🇮🇳 INDIA</option>
+                <option value="US">🇺🇸 UNITED STATES</option>
+                <option value="CA">🇨🇦 CANADA</option>
+                <option value="GB">🇬🇧 UNITED KINGDOM</option>
+                <option value="AU">🇦🇺 AUSTRALIA</option>
+                <option value="DE">🇩🇪 GERMANY</option>
+                <option value="FR">🇫🇷 FRANCE</option>
+                <option value="JP">🇯🇵 JAPAN</option>
+                <option value="AE">🇦🇪 UAE</option>
+                <option value="SG">🇸🇬 SINGAPORE</option>
+              </select>
             </div>
           </div>
 
@@ -270,7 +287,7 @@ export default function Cart() {
               </div>
               <div className="flex justify-between">
                 <span className="text-white/40">SHIPPING</span>
-                <span className="text-accent">{shipping === 0 ? '[ FREE ]' : formatPrice(shipping)}</span>
+                <span className="text-accent">{shipping === 0 ? '[ FREE ]' : `$${shipping.toFixed(2)}`}</span>
               </div>
               <div className="pt-8 border-t-2 border-white/10 flex justify-between items-end">
                 <span className="font-display text-2xl">TOTAL</span>
@@ -293,7 +310,7 @@ export default function Cart() {
             </button>
             <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
               <p className="font-mono text-[10px] text-white/20 text-center leading-relaxed uppercase tracking-widest">
-                TAXES CALCULATED AT CHECKOUT. FREE SHIPPING ON ORDERS OVER $250.
+                FLAT RATE: $4.99 US / $9.99 INTL. FREE ON ORDERS OVER $100.
               </p>
               <div className="flex justify-center gap-4 opacity-20 grayscale">
                 <div className="w-8 h-5 bg-white rounded-sm" />

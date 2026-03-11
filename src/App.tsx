@@ -9,6 +9,12 @@ import Category from './pages/Category';
 import Cart from './pages/Cart';
 import Wishlist from './pages/Wishlist';
 import Auth from './pages/Auth';
+import About from './pages/About';
+import ShippingPolicy from './pages/ShippingPolicy';
+import Contact from './pages/Contact';
+import Returns from './pages/Returns';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import { supabase } from './lib/supabase';
 
 function AnimatedRoutes() {
@@ -45,6 +51,36 @@ function AnimatedRoutes() {
         <Route path="/auth" element={
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
             <Auth />
+          </motion.div>
+        } />
+        <Route path="/about" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <About />
+          </motion.div>
+        } />
+        <Route path="/shipping" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <ShippingPolicy />
+          </motion.div>
+        } />
+        <Route path="/contact" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Contact />
+          </motion.div>
+        } />
+        <Route path="/returns" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Returns />
+          </motion.div>
+        } />
+        <Route path="/terms" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Terms />
+          </motion.div>
+        } />
+        <Route path="/privacy" element={
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Privacy />
           </motion.div>
         } />
         <Route path="*" element={<Home />} />

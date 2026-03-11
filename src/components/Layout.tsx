@@ -222,8 +222,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <h3 className="font-mono text-sm tracking-[0.5em] mb-12 uppercase font-bold text-black/40">[ SUPPORT ]</h3>
                 <ul className="space-y-8 text-3xl font-display uppercase">
                   <li><Link to="/shipping" className="hover:text-accent transition-all hover:translate-x-4 inline-block">SHIPPING</Link></li>
+                  <li><Link to="/returns" className="hover:text-accent transition-all hover:translate-x-4 inline-block">RETURNS</Link></li>
                   <li><Link to="/size-guide" className="hover:text-accent transition-all hover:translate-x-4 inline-block">SIZING</Link></li>
                   <li><Link to="/contact" className="hover:text-accent transition-all hover:translate-x-4 inline-block">CONTACT</Link></li>
+                  <li><Link to="/terms" className="hover:text-accent transition-all hover:translate-x-4 inline-block">TERMS</Link></li>
+                  <li><Link to="/privacy" className="hover:text-accent transition-all hover:translate-x-4 inline-block">PRIVACY</Link></li>
                 </ul>
               </div>
             </div>
