@@ -830,11 +830,51 @@ app.post("/api/reviews", async (req, res) => {
   }
 });
 
+// Auto-generated Sitemap
+app.get("/api/sitemap.xml", async (_req, res) => {
+  try {
+    const { data: products } = await supabase.from("products").select("slug, updated_at");
+    const base = "https://store-aether.vercel.app";
+    const staticPages = [
+      { url: "/", priority: "1.0" },
+      { url: "/category/men", priority: "0.9" },
+      { url: "/category/women", priority: "0.9" },
+      { url: "/category/kids", priority: "0.8" },
+      { url: "/category/unisex", priority: "0.8" },
+      { url: "/collections", priority: "0.8" },
+      { url: "/about", priority: "0.6" },
+      { url: "/shipping", priority: "0.5" },
+      { url: "/contact", priority: "0.5" },
+      { url: "/returns", priority: "0.4" },
+      { url: "/terms", priority: "0.3" },
+      { url: "/privacy", priority: "0.3" },
+      { url: "/size-guide", priority: "0.5" },
+      { url: "/track-order", priority: "0.4" },
+    ];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    for (const p of staticPages) {
+      xml += `  <url><loc>${base}${p.url}</loc><priority>${p.priority}</priority></url>\n`;
+    }
+    if (products) {
+      for (const p of products) {
+        xml += `  <url><loc>${base}/product/${p.slug}</loc><lastmod>${p.updated_at || new Date().toISOString()}</lastmod><priority>0.7</priority></url>\n`;
+      }
+    }
+    xml += `</urlset>`;
+
+    res.setHeader("Content-Type", "application/xml");
+    res.send(xml);
+  } catch (error: any) {
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
-    version: "20.0",
+    version: "21.0",
     env: process.env.NODE_ENV,
     vercel: !!process.env.VERCEL,
     env_check: {

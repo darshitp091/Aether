@@ -22,6 +22,7 @@ export default function ProductDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const addToCart = useStore((state) => state.addToCart);
   const toggleWishlist = useStore((state) => state.toggleWishlist);
@@ -118,6 +119,28 @@ export default function ProductDetail() {
 
   return (
     <div className="bg-black text-white min-h-screen">
+      {/* Zoom Modal */}
+      <AnimatePresence>
+        {isZoomed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsZoomed(false)}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-lg flex items-center justify-center cursor-zoom-out p-8"
+          >
+            <motion.img
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              src={mainImage}
+              alt={product.name}
+              className="max-w-full max-h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="max-w-[1800px] mx-auto px-6 md:px-12 py-24">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-widest text-white/40 mb-12">
@@ -158,8 +181,9 @@ export default function ProductDetail() {
                 <img
                   src={mainImage}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-zoom-in"
                   referrerPolicy="no-referrer"
+                  onClick={() => setIsZoomed(true)}
                 />
                 <div className="absolute top-6 left-6 flex flex-col gap-3">
                   <div className="bg-accent text-black px-4 py-1 text-[10px] font-black uppercase tracking-widest">

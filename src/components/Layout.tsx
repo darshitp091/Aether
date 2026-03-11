@@ -5,10 +5,12 @@ import { ShoppingCart, Heart, Search, Menu, X, User, ChevronRight } from 'lucide
 import { useStore } from '../store';
 import { cn } from '../utils';
 import GlobalBackground3D from './GlobalBackground3D';
+import CartDrawer from './CartDrawer';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const cart = useStore((state) => state.cart);
   const wishlist = useStore((state) => state.wishlist);
@@ -68,14 +70,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </Link>
-          <Link to="/cart" className="relative p-3 bg-accent text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative p-3 bg-accent text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+          >
             <ShoppingCart size={24} />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 w-6 h-6 bg-white text-black text-[10px] font-bold flex items-center justify-center border-2 border-black">
                 {cartCount}
               </span>
             )}
-          </Link>
+          </button>
           <Link to="/auth" className="hidden md:block p-3 hover:bg-white hover:text-black transition-all border-2 border-transparent hover:border-black">
             <User size={24} />
           </Link>
@@ -245,6 +250,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {/* Cart Drawer */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </div>
   );
 }
